@@ -356,9 +356,12 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
 ## Vídeo executivo
 
 - **Link do vídeo:** *(adicionar após a gravação)*
-- **Roteiro:** [`reports/roteiro_video.md`](reports/roteiro_video.md). É uma reunião simulada com
-  gestores públicos, com o problema, os principais insights, o valor estratégico e as recomendações,
-  em até 5 minutos.
+- **Apresentação:** [`reports/apresentacao_executiva.pptx`](reports/apresentacao_executiva.pptx).
+  São 13 slides, um por pergunta de negócio, com a resposta e os dados, e a fala de cada slide nas
+  notas do apresentador. Gerada por `python -m src.visualization.apresentacao`.
+- **Roteiro:** [`reports/roteiro_video.md`](reports/roteiro_video.md), slide a slide, com tempos. É
+  uma reunião simulada com gestores públicos, com o problema, os principais insights, o valor
+  estratégico e as recomendações, em ~4min30s.
 
 ## Como reproduzir
 
@@ -453,6 +456,7 @@ as métricas do teste de 2024 saíram idênticas às versionadas.
   | #5 | `feature/fechamento` | pipeline único, insights, evoluções futuras e roteiro do vídeo |
   | #6 | `feature/melhorias` | testes, amostra sem Google Cloud, 4 modelos com peso amostral, metas conservadoras |
   | #7 | `feature/metas-estaduais` | metas estaduais na EDA e validação externa com os resultados de 2025 |
+  | #8 | `feature/apresentacao` | apresentação executiva em PowerPoint e roteiro do vídeo slide a slide |
 
 - Os commits são pequenos e descrevem o *porquê* da mudança.
 - As decisões analíticas ficam registradas em [`docs/decisoes.md`](docs/decisoes.md).

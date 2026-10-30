@@ -49,7 +49,7 @@ Cada exigência do enunciado e onde ela é atendida no repositório.
 |---|---|
 | `data/`, `notebooks/`, `src/{preprocessing,modeling,evaluation,visualization}`, `reports/`, `images/` | estrutura do repositório |
 | `requirements.txt`, `README.md`, `.gitignore` | raiz |
-| Histórico de commits, branches, pull requests | PRs #1 a #7 (seção "Como o Git foi usado" do README) |
+| Histórico de commits, branches, pull requests | PRs #1 a #8 (seção "Como o Git foi usado" do README) |
 | Documentação das decisões analíticas | `docs/decisoes.md` (D1 a D16) |
 
 ## README
@@ -79,4 +79,4 @@ Cada exigência do enunciado e onde ela é atendida no repositório.
 | Documentação técnica | ✅ `docs/decisoes.md`, docstrings dos módulos |
 | Pipeline reproduzível | ✅ `python -m src.pipeline --notebooks`; sem Google Cloud: `TC_AMOSTRA=1` com a amostra versionada |
 | Análises e visualizações | ✅ `images/` (EDA, modelagem, SHAP, mapas) |
-| **Vídeo executivo (até 5 min)** | ⏳ roteiro pronto em `reports/roteiro_video.md`; **falta gravar e colocar o link no README** |
+| **Vídeo executivo (até 5 min)** | ⏳ apresentação (`reports/apresentacao_executiva.pptx`) e roteiro prontos; **falta gravar e colocar o link no README** |
