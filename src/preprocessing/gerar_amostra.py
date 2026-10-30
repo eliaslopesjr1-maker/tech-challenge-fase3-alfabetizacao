@@ -24,7 +24,8 @@ import pandas as pd
 from src.config import DIR_AMOSTRA, DIR_DADOS, SEED
 
 ALUNOS_POR_ANO = 60_000
-RAW_COMPLETOS = ["meta_alfabetizacao_brasil", "meta_alfabetizacao_municipio", "diretorio_municipio"]
+RAW_COMPLETOS = ["meta_alfabetizacao_brasil", "meta_alfabetizacao_uf", "meta_alfabetizacao_municipio",
+                 "diretorio_municipio"]
 GOLD_COMPLETOS = ["painel_municipio_rede", "indicador_brasil", "indicador_uf"]
 
 

@@ -62,6 +62,11 @@ Notebook completo: [`notebooks/01_eda.ipynb`](notebooks/01_eda.ipynb).
 - **O histórico prevê o futuro, com ruído:** a correlação entre 2023 e 2024 é de 0,67, com forte
   regressão à média em redes pequenas.
 - **Só 53% das redes municipais atingiram a meta de 2024**, e no Sul apenas 34%.
+- **Metas estaduais:** 10 das 26 UFs bateram a meta estadual em 2024. Em 2025, foram **20**, com
+  saltos de até +19 p.p. (Bahia). O RS se recuperou parcialmente (44,7% → 52%), o que confirma que
+  a queda de 2024 foi um choque passageiro.
+
+![Metas estaduais](images/eda_12_metas_estaduais.png)
 
 ## Etapas de modelagem
 
@@ -253,6 +258,14 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
 - **Onde está o risco:** concentrado na **Bahia**, com chance média de 19%. Ali o risco é
   estrutural, não um choque, e a previsão tem confiança normal.
 - **RS:** pelo cenário neutro, a chance média é de 42%, com confiança baixa.
+- **Validação externa com os resultados estaduais de 2025:**
+  - **Direção:** o modelo **acerta**. A correlação entre a chance média prevista da UF e o fato
+    de a UF ter batido a meta é de 0,43.
+  - **Nível:** o modelo foi **pessimista**. Previu 52%, mas 76% das UFs bateram a meta em 2025,
+    ano de avanço amplo.
+  - **Maior erro:** a Bahia, com a menor chance prevista e o maior salto real.
+  - **Uso correto:** a previsão serve para **priorizar** quem está mais longe e em contexto mais
+    difícil, não para afirmar quem vai ou não bater a meta.
 - **Próximo passo:** retreinar com os resultados municipais de 2025, o que dará duas transições
   para aprender.
 
@@ -272,7 +285,8 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
    crianças não alfabetizadas nas redes municipais. São Paulo e Guarulhos ficam abaixo do esperado.
 7. **Bater a meta exige constância:** a regra "já estou acima da meta" acerta tanto quanto o acaso,
    por causa da regressão à média. Choques estaduais, como as enchentes no RS, mudam o resultado
-   de um ano para o outro.
+   de um ano para o outro. E o ritmo nacional também muda: 10 UFs bateram a meta estadual em 2024
+   e 20 em 2025.
 8. **Prever a criança é diferente de prever a rede.** Com dados públicos, o teto individual é
    AUC ~0,70, porque família e sala de aula não estão nos dados. No nível da rede, o modelo é bem
    calibrado e útil para priorizar.
@@ -307,6 +321,8 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
 - **Modelo de metas com uma só transição:** treinado só com 2023 → 2024, não separa choque
   passageiro de tendência. Nos estados novos o AUC cai para 0,59. A regra de choque estadual
   (limite de 10 p.p.) atenua o problema, mas é uma escolha de projeto, não algo aprendido dos dados.
+  A validação com os resultados estaduais de 2025 confirmou o limite: a direção está certa, mas o
+  nível ficou pessimista, porque 2025 teve um avanço muito maior que 2024.
 - **Índice de risco e clusters:** os pesos do índice são iguais por decisão, não por validação, e
   os grupos de contexto têm separação modesta (silhueta de ~0,15). São ferramentas de priorização
   e comparação entre pares, não categorias rígidas.
@@ -436,6 +452,7 @@ as métricas do teste de 2024 saíram idênticas às versionadas.
   | #4 | `feature/aplicacao-estrategica` | metas 2025, risco municipal e grupos de contexto |
   | #5 | `feature/fechamento` | pipeline único, insights, evoluções futuras e roteiro do vídeo |
   | #6 | `feature/melhorias` | testes, amostra sem Google Cloud, 4 modelos com peso amostral, metas conservadoras |
+  | #7 | `feature/metas-estaduais` | metas estaduais na EDA e validação externa com os resultados de 2025 |
 
 - Os commits são pequenos e descrevem o *porquê* da mudança.
 - As decisões analíticas ficam registradas em [`docs/decisoes.md`](docs/decisoes.md).
