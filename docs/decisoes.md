@@ -58,3 +58,38 @@ mesmo município compartilham as mesmas features e inflariam a métrica num spli
 Os valores ausentes são poucos (< 5%, sobretudo INSE). São imputados pela mediana com
 `SimpleImputer(add_indicator=True)` dentro do `Pipeline`, então a mediana é calculada só nos dados
 de treino de cada fold.
+
+### D9. LightGBM conservador e limiar escolhido no treino
+A busca de hiperparâmetros escolheu árvores rasas (16 folhas) com folhas grandes (921 alunos), a
+configuração com o menor gap entre treino e validação. Faz sentido porque as features são do
+município × rede: folhas pequenas decorariam municípios. O limiar de decisão (0,645) foi fixado
+nas predições *out-of-fold* do treino para identificar 80% dos não alfabetizados. No teste de
+2024 ele identificou 78%.
+
+### D10. Interpretação por tema, não por coeficiente
+Com variáveis socioeconômicas quase redundantes, os coeficientes da logística trocam de sinal.
+As conclusões usam o SHAP somado por tema, em que efeitos de variáveis correlacionadas se compensam
+dentro do grupo.
+
+## Aplicação estratégica
+
+### D11. Modelo de metas como transição "ano atual → ano seguinte"
+Treinado com a situação de 2023 (taxa, meta de 2024, contexto) para prever se a rede atingiu a
+meta de 2024, e aplicado à situação de 2024 para prever a meta de 2025. A validação é feita de duas
+formas: estratificada (municípios novos, AUC 0,81) e por UF (estados novos, AUC 0,59). A UF foi
+mantida por ter a melhor validação, e a dependência do território está documentada numa análise
+de sensibilidade. Com uma só transição, choques como as enchentes no RS em 2024 contaminam a
+previsão de 2025.
+
+### D12. Índice de risco com três componentes
+Média dos percentis de: (1) taxa observada, (2) taxa esperada pelo contexto (modelo do aluno) e
+(3) probabilidade de não atingir a meta. Redes com menos de 20 alunos avaliados ficam fora dos
+rankings exibidos, porque a taxa delas é instável. O ranking por número de crianças não
+alfabetizadas complementa o índice, mostrando alcance em vez de gravidade.
+
+### D13. Clusterização só com contexto, k = 5
+O KMeans usa 12 variáveis de contexto padronizadas, sem o resultado da prova, para que dê para
+comparar o desempenho de municípios parecidos. A silhueta é estável (~0,15) de k = 4 a 8. O k = 5
+foi escolhido porque separa as áreas indígenas, quilombolas e de assentamento, que pedem política
+própria. Os nomes dos grupos são atribuídos por regras fixas sobre o perfil, para não dependerem da
+numeração do KMeans.
