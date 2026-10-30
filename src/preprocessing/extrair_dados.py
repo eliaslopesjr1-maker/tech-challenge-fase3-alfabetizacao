@@ -18,8 +18,8 @@ from google.cloud import bigquery
 
 from src.config import DIR_RAW, GCP_PROJECT_ID
 
-# nome local -> consulta. As tabelas de diretório trazem só as colunas usadas
-# (a de município tem uma coluna GEOGRAPHY que não precisamos).
+# nome local -> consulta. As tabelas de diretório trazem só as colunas usadas;
+# do centroide (GEOGRAPHY) do município ficam só longitude e latitude, para os mapas.
 CONSULTAS = {
     "uf": "SELECT * FROM `basedosdados.br_inep_avaliacao_alfabetizacao.uf`",
     "municipio": "SELECT * FROM `basedosdados.br_inep_avaliacao_alfabetizacao.municipio`",
@@ -30,7 +30,8 @@ CONSULTAS = {
     "diretorio_uf": "SELECT id_uf, sigla, nome, regiao FROM `basedosdados.br_bd_diretorios_brasil.uf`",
     "diretorio_municipio": """
         SELECT id_municipio, nome, capital_uf, sigla_uf, nome_uf, nome_regiao,
-               id_regiao_imediata, nome_regiao_imediata, amazonia_legal
+               id_regiao_imediata, nome_regiao_imediata, amazonia_legal,
+               ST_X(centroide) AS longitude, ST_Y(centroide) AS latitude
         FROM `basedosdados.br_bd_diretorios_brasil.municipio`
     """,
 }

@@ -1,6 +1,6 @@
 # Tech Challenge Fase 3 - Predição e Inteligência Analítica para Alfabetização no Brasil
 
-> README em construção. As seções de aplicação estratégica e evoluções futuras serão completadas nas próximas etapas.
+> README em construção. As seções de insights consolidados, evoluções futuras e vídeo serão completadas na etapa final.
 
 Continuação do [Tech Challenge Fase 2](https://github.com/eliaslopesjr1-maker/tech-challenge-fase2-alfabetizacao).
 A camada Gold construída lá é usada aqui para análise exploratória e modelos de Machine Learning
@@ -145,6 +145,35 @@ Técnicas: **permutation importance**, **SHAP** (global, dependência e explica�
   previsão de 95% de alfabetização, graças a uma rede com abandono zero, distorção de 1,9% e tempo
   integral.
 
+## Aplicação estratégica
+
+Notebook completo: [`notebooks/04_aplicacao_estrategica.ipynb`](notebooks/04_aplicacao_estrategica.ipynb).
+Unidade de análise: a **rede municipal** de cada município, que tem metas oficiais.
+Arquivos para os gestores, em `reports/`:
+- `previsao_meta_2025.csv`: chance de cada rede atingir a meta de 2025.
+- `ranking_risco_municipios_2024.csv`: índice de risco e seus componentes.
+- `clusters_municipios.csv`: grupo de contexto e desvio em relação ao esperado.
+
+**Modelo de metas:** aprende a transição "ano atual → ano seguinte".
+- **Treino:** situação em 2023 → atingiu a meta de 2024?
+- **Previsão:** situação em 2024 → vai atingir a meta de 2025?
+- **Features:** taxa atual, meta, distância até a meta, tamanho da rede e contexto.
+
+| Modelo | AUC (municípios novos) | AUC (estados novos) |
+|---|---|---|
+| Regra "já está acima da meta" | 0,50 | 0,50 |
+| Regressão logística | 0,80 | 0,56 |
+| **LightGBM** | **0,81** | **0,59** |
+
+**Índice de risco:** média, em percentil, de três sinais:
+1. a taxa observada;
+2. a taxa esperada pelo contexto, segundo o modelo do aluno;
+3. a probabilidade de não atingir a meta de 2025.
+
+**Clusterização:** KMeans com k = 5 sobre 12 variáveis de **contexto**, sem o resultado da prova.
+
+![Grupos de municípios](images/app_05_clusters.png)
+
 ## Respostas às perguntas de negócio
 
 **Quais fatores mais impactam a alfabetização?**
@@ -159,6 +188,58 @@ estão ao alcance da gestão pública.
 importance concordam no topo do ranking. Os coeficientes da logística foram descartados para
 interpretação: com a multicolinearidade, alguns sinais se invertem.
 
+**Quais municípios apresentam maior risco educacional?**
+- **Por gravidade:** o risco é concentrado nas redes municipais da **Bahia** (82% delas no decil
+  de maior risco, como Ilhéus, Juazeiro, Feira de Santana e Itabuna), além de **Sergipe, Rio Grande
+  do Norte, Amazonas e Pará**.
+- **Por volume de crianças:** em crianças não alfabetizadas, as prioridades são **São Paulo
+  (~21,6 mil), Rio de Janeiro (~15,7 mil), Manaus (~9,3 mil) e Salvador (~7,7 mil)**.
+- **Abaixo do esperado:** São Paulo (48% contra 56% esperados) e Guarulhos (44% contra 61%)
+  alfabetizam bem menos do que o contexto deles prevê.
+
+![Mapa de risco](images/app_03_mapa_risco.png)
+
+**Quais regiões possuem padrões semelhantes?**
+Cinco perfis de contexto:
+
+| Grupo | Onde está | Taxa 2024 | Característica marcante |
+|---|---|---|---|
+| Pequenos municípios desenvolvidos | Sul/Sudeste | 71% | baixa distorção, biblioteca em todas as escolas |
+| Vulnerável com fluxo escolar regular | Nordeste | 63% | pobreza infantil de 57%, mas distorção de 6% e mais tempo integral |
+| Urbano de maior porte | Sudeste/Sul | 59% | contexto favorável, resultado abaixo dos pequenos |
+| Áreas diferenciadas e rurais | Nordeste/Norte | 50% | 33% dos alunos em áreas indígenas, quilombolas ou de assentamento |
+| Vulnerável com fluxo escolar crítico | Nordeste/Norte | 42% | distorção de 16%, abandono de 1,9%, pouca infraestrutura de leitura |
+
+Os dois grupos vulneráveis têm **a mesma pobreza e o mesmo INSE**, mas **21 pontos de diferença**,
+explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio positivo**, municípios
+30 a 50 pontos acima do esperado, como Tartarugalzinho (AP), Jequiá da Praia (AL) e Barreirinhas (MA).
+
+**Como prever municípios que podem não atingir metas futuras?**
+- **Com o modelo de transição.** A previsão é que **55% das redes atinjam a meta de 2025**, e
+  **1.504 redes (28%) têm chance abaixo de 40%**, concentradas no **RS e na BA**.
+- **Cuidado com o RS:** com uma única transição de treino (2023 → 2024, o ano das enchentes no RS),
+  a previsão do RS significa "risco alto se o padrão de 2024 se repetir". A análise de
+  sensibilidade, com e sem UF, está no notebook. O modelo deve ser retreinado com os resultados
+  municipais de 2025.
+
+## Aplicação prática para políticas públicas
+
+1. **Priorização de recursos:** o ranking de risco orienta o apoio técnico e financeiro do
+   Compromisso Nacional Criança Alfabetizada. O índice prioriza **gravidade**; o número de crianças
+   prioriza **alcance**.
+2. **Alerta precoce:** a previsão de metas identifica, **antes da prova**, as redes que precisam de
+   reforço: formação de alfabetizadores, avaliação diagnóstica e material estruturado.
+3. **Foco no fluxo escolar:** distorção idade-série e abandono são os fatores mais fortes e mais
+   acionáveis. As ações indicadas são busca ativa, acompanhamento de frequência e recomposição de
+   aprendizagem nos anos iniciais.
+4. **Regime de colaboração Estado-municípios:** o efeito do Ceará indica que política estadual
+   estruturada multiplica o resultado. BA, SE, RN e TO, abaixo do esperado, são candidatos a
+   programas desse tipo.
+5. **Aprendizagem entre pares:** os grupos de contexto e as referências de desvio positivo
+   permitem montar redes de intercâmbio entre municípios parecidos.
+6. **Estratégias diferenciadas:** áreas indígenas, quilombolas e de assentamento precisam de
+   política específica (material bilíngue, calendário próprio), não apenas de mais recursos.
+
 ## Limitações do projeto
 
 - **Features só de contexto:** o `id_escola` dos microdados é anonimizado pelo Inep e não cruza
@@ -168,6 +249,8 @@ interpretação: com a multicolinearidade, alguns sinais se invertem.
   ano anterior só existe para 2024.
 - **Choques não previsíveis:** em 2024 o modelo superestimou o Sul (68% previsto, 61% real), ano
   das enchentes no RS. Eventos assim pedem retreino a cada ciclo.
+- **Modelo de metas com uma só transição:** treinado só com 2023 → 2024, não separa choque
+  passageiro de tendência. Nos estados novos o AUC cai para 0,59.
 - **Qualidade da fonte:** os Indicadores Educacionais de 2023 na Base dos Dados estão com colunas
   deslocadas, então foi usada a edição de 2022.
 - **Amostra de 300 mil alunos por ano**, por limite de memória da máquina de desenvolvimento.
