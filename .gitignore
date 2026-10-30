@@ -1,0 +1,17 @@
+# Ambiente
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Dados e modelos (reproduzíveis pelos scripts - grandes demais para o Git)
+data/raw/*
+data/gold/*
+!data/**/.gitkeep
+models/*
+!models/.gitkeep
+
+# Credenciais - nunca versionar
+*.json
+!**/package.json
+.env
