@@ -89,17 +89,26 @@ Treino: `python -m src.modeling.treinar_aluno`.
 
 ## Escolha do algoritmo
 
-| Critério | Regressão logística (baseline) | **LightGBM (escolhido)** |
-|---|---|---|
-| AUC validação cruzada | 0,647 ± 0,014 | **0,648 ± 0,008** |
-| AUC teste 2024 | 0,621 | **0,631** |
-| PR-AUC dos não alfabetizados | 0,516 | **0,526** |
-| Brier (calibração) | 0,229 | **0,227** |
+Quatro candidatos, com a mesma validação e o mesmo teste:
 
-O LightGBM foi escolhido por ser melhor em todas as métricas do teste, mais estável entre os folds
-e capaz de aprender interações (rede × UF) sem engenharia manual, além de ter boa interpretação
-via SHAP. A busca selecionou a configuração mais conservadora (16 folhas, mínimo de 921 alunos por
-folha), que tem o **menor gap entre treino e validação (0,03)**. As mais complexas superajustavam.
+| Critério | Logística (baseline) | HistGradientBoosting | **LightGBM (escolhido)** | LightGBM ponderado (`peso_aluno`) |
+|---|---|---|---|---|
+| AUC validação cruzada | 0,647 ± 0,014 | 0,648 ± 0,008 | **0,648 ± 0,008** | 0,647 ± 0,008 |
+| AUC teste 2024 | 0,621 | 0,631 | **0,631** | 0,630 |
+| AUC teste ponderado pelo peso amostral | 0,618 | 0,628 | **0,628** | 0,627 |
+| PR-AUC dos não alfabetizados | 0,516 | 0,526 | **0,526** | 0,525 |
+| Brier (calibração) | 0,229 | 0,227 | **0,227** | 0,227 |
+
+- **Por que o LightGBM:** é o melhor (por margem mínima), mais estável entre os folds que a
+  logística e aprende interações (rede × UF) sem engenharia manual. Também tem boa interpretação
+  via SHAP.
+- **Configuração escolhida pela busca:** a mais conservadora (16 folhas, mínimo de 921 alunos por
+  folha), que tem o **menor gap entre treino e validação (0,03)**. As mais complexas superajustavam.
+- **O que os outros candidatos mostram:**
+  - O **HistGradientBoosting empata** com o LightGBM. Dois métodos de boosting batem no mesmo valor,
+    o que confirma que o limite está **nos dados**, não no algoritmo.
+  - **Treinar com o peso amostral** do Inep não muda o resultado. A conclusão vale para a
+    **população** de alunos, não só para a amostra avaliada.
 
 ## Métricas de avaliação
 
@@ -108,6 +117,7 @@ Resultados no **teste de 2024**, com dados nunca vistos:
 | Métrica | Valor | Por que importa |
 |---|---|---|
 | ROC-AUC | **0,631** | capacidade de ordenar alunos por risco |
+| ROC-AUC ponderado (`peso_aluno`) | 0,628 | o mesmo, representando a população de alunos |
 | Teto teórico (AUC) | 0,698 | máximo possível com features de contexto; o modelo captura **66% do sinal disponível** |
 | Recall dos não alfabetizados (limiar 0,645) | **78%** | de cada 10 crianças que não se alfabetizaram, o modelo sinaliza 8 |
 | Precisão dos não alfabetizados | 46% | contra 40% de um sorteio: é triagem, não diagnóstico |
@@ -175,6 +185,18 @@ Arquivos para os gestores, em `reports/`:
 | Regra "já está acima da meta" | 0,50 | 0,50 |
 | Regressão logística | 0,80 | 0,56 |
 | **LightGBM** | **0,81** | **0,59** |
+| Cenário neutro (só taxa, meta, distância e tamanho) | 0,61 | 0,47 |
+
+**Previsão conservadora:** com uma única transição de treino, o modelo completo repete o que
+aconteceu em cada estado naquele ano. O RS caiu ~22 pontos além do Brasil em 2024, o ano das
+enchentes. A regra adotada:
+- **UF com choque atípico** (variação mais de 10 p.p. distante da nacional; RS e MG): publica-se o
+  **cenário neutro**, sem padrão regional.
+- **UF sem histórico no treino** (SP e AC não tinham rede municipal avaliada em 2023): o cenário
+  completo é mantido, mas a previsão fica marcada com **confiança baixa**.
+- **Cada rede** traz os dois cenários e o nível de confiança em `previsao_meta_2025.csv`.
+
+![Choques estaduais](images/app_00_choques_estaduais.png)
 
 **Índice de risco:** média, em percentil, de três sinais:
 1. a taxa observada;
@@ -200,9 +222,9 @@ importance concordam no topo do ranking. Os coeficientes da logística foram des
 interpretação: com a multicolinearidade, alguns sinais se invertem.
 
 **Quais municípios apresentam maior risco educacional?**
-- **Por gravidade:** o risco é concentrado nas redes municipais da **Bahia** (82% delas no decil
-  de maior risco, como Ilhéus, Juazeiro, Feira de Santana e Itabuna), além de **Sergipe, Rio Grande
-  do Norte, Amazonas e Pará**.
+- **Por gravidade:** o risco é concentrado nas redes municipais da **Bahia** (84% delas no decil
+  de maior risco, como Ilhéus, Itabuna, Jacobina e Serrinha), além de **Sergipe, Amazonas, Rio
+  Grande do Norte e Pará**.
 - **Por volume de crianças:** em crianças não alfabetizadas, as prioridades são **São Paulo
   (~21,6 mil), Rio de Janeiro (~15,7 mil), Manaus (~9,3 mil) e Salvador (~7,7 mil)**.
 - **Abaixo do esperado:** São Paulo (48% contra 56% esperados) e Guarulhos (44% contra 61%)
@@ -226,12 +248,13 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
 30 a 50 pontos acima do esperado, como Tartarugalzinho (AP), Jequiá da Praia (AL) e Barreirinhas (MA).
 
 **Como prever municípios que podem não atingir metas futuras?**
-- **Com o modelo de transição.** A previsão é que **55% das redes atinjam a meta de 2025**, e
-  **1.504 redes (28%) têm chance abaixo de 40%**, concentradas no **RS e na BA**.
-- **Cuidado com o RS:** com uma única transição de treino (2023 → 2024, o ano das enchentes no RS),
-  a previsão do RS significa "risco alto se o padrão de 2024 se repetir". A análise de
-  sensibilidade, com e sem UF, está no notebook. O modelo deve ser retreinado com os resultados
-  municipais de 2025.
+- **Com o modelo de transição e a regra conservadora para choques estaduais.** A previsão é que
+  **54% das redes atinjam a meta de 2025**, e **1.431 redes (27%) têm chance abaixo de 40%**.
+- **Onde está o risco:** concentrado na **Bahia**, com chance média de 19%. Ali o risco é
+  estrutural, não um choque, e a previsão tem confiança normal.
+- **RS:** pelo cenário neutro, a chance média é de 42%, com confiança baixa.
+- **Próximo passo:** retreinar com os resultados municipais de 2025, o que dará duas transições
+  para aprender.
 
 ## Insights encontrados
 
@@ -282,7 +305,11 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
 - **Choques não previsíveis:** em 2024 o modelo superestimou o Sul (68% previsto, 61% real), ano
   das enchentes no RS. Eventos assim pedem retreino a cada ciclo.
 - **Modelo de metas com uma só transição:** treinado só com 2023 → 2024, não separa choque
-  passageiro de tendência. Nos estados novos o AUC cai para 0,59.
+  passageiro de tendência. Nos estados novos o AUC cai para 0,59. A regra de choque estadual
+  (limite de 10 p.p.) atenua o problema, mas é uma escolha de projeto, não algo aprendido dos dados.
+- **Índice de risco e clusters:** os pesos do índice são iguais por decisão, não por validação, e
+  os grupos de contexto têm separação modesta (silhueta de ~0,15). São ferramentas de priorização
+  e comparação entre pares, não categorias rígidas.
 - **Qualidade da fonte:** os Indicadores Educacionais de 2023 na Base dos Dados estão com colunas
   deslocadas, então foi usada a edição de 2022.
 - **Amostra de 300 mil alunos por ano**, por limite de memória da máquina de desenvolvimento.
@@ -319,6 +346,35 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
 
 ## Como reproduzir
 
+### Opção rápida: sem Google Cloud (amostra versionada)
+
+O repositório traz uma amostra de 6 MB em `data/amostra/`: o painel completo, as metas e 60 mil
+alunos por ano. Também traz os modelos treinados em `models/`. Com ela, os quatro notebooks rodam
+em poucos minutos:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate          # Windows (Linux/Mac: source .venv/bin/activate)
+pip install -r requirements.txt
+set TC_AMOSTRA=1                # Linux/Mac: export TC_AMOSTRA=1
+jupyter notebook notebooks/
+```
+
+Os resultados com a amostra ficam muito próximos aos da base completa. As métricas oficiais em
+`reports/` vêm da base completa.
+
+### Testes automatizados
+
+```bash
+python -m pytest
+```
+
+São 18 testes: as regras da Gold, as checagens de qualidade, as **garantias contra data leakage**
+(nenhuma coluna da prova entre as features, fontes externas sempre anteriores à avaliação), os
+pipelines com valores ausentes e categorias novas, as métricas e as regras do modelo de metas.
+
+### Opção completa: do BigQuery ao modelo
+
 Pré-requisitos: Python 3.13 e acesso a um projeto do Google Cloud. A consulta à Base dos Dados fica
 dentro da cota gratuita do BigQuery.
 
@@ -345,12 +401,13 @@ O pipeline executa, em ordem:
 | Notebooks | `--notebooks` | gráficos em `images/` e relatórios em `reports/` |
 
 Para recomeçar de uma etapa: `python -m src.pipeline --a-partir-de treinar_aluno --notebooks`.
-Tudo usa `random_state=42` e versões fixas no `requirements.txt`.
+Tudo usa `random_state=42` e versões fixas no `requirements.txt`. O pipeline foi testado do zero:
+as métricas do teste de 2024 saíram idênticas às versionadas.
 
 ## Estrutura
 
 ```
-├── data/            # raw/ (Bronze) e gold/ - gerados pelos scripts, fora do Git
+├── data/            # raw/ e gold/ (gerados, fora do Git) e amostra/ (versionada, 6 MB)
 ├── notebooks/       # 01_eda, 02_modelagem_aluno, 03_interpretabilidade, 04_aplicacao_estrategica
 ├── src/
 │   ├── pipeline.py      # executa tudo com um comando
@@ -360,8 +417,9 @@ Tudo usa `random_state=42` e versões fixas no `requirements.txt`.
 │   └── visualization/   # funções de gráfico
 ├── reports/         # métricas, rankings e previsões para gestores, roteiro do vídeo
 ├── images/          # gráficos usados no README e no vídeo
-├── docs/            # decisões analíticas
-└── models/          # modelos treinados - fora do Git
+├── docs/            # decisões analíticas e checklist de entrega
+├── tests/           # testes automatizados (pytest)
+└── models/          # modelos finais treinados (~1 MB)
 ```
 
 ## Como o Git foi usado
@@ -377,6 +435,7 @@ Tudo usa `random_state=42` e versões fixas no `requirements.txt`.
   | #3 | `feature/interpretabilidade` | SHAP, permutation importance e efeito por estado |
   | #4 | `feature/aplicacao-estrategica` | metas 2025, risco municipal e grupos de contexto |
   | #5 | `feature/fechamento` | pipeline único, insights, evoluções futuras e roteiro do vídeo |
+  | #6 | `feature/melhorias` | testes, amostra sem Google Cloud, 4 modelos com peso amostral, metas conservadoras |
 
 - Os commits são pequenos e descrevem o *porquê* da mudança.
 - As decisões analíticas ficam registradas em [`docs/decisoes.md`](docs/decisoes.md).

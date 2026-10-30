@@ -8,6 +8,7 @@ informação da validação.
 
 from lightgbm import LGBMClassifier
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
@@ -36,6 +37,18 @@ def pipeline_logistica(numericas: list[str], categoricas: list[str]) -> Pipeline
     return Pipeline([
         ("prep", preprocessador(numericas, categoricas, escalar=True)),
         ("modelo", LogisticRegression(C=1.0, max_iter=2000)),
+    ])
+
+
+def pipeline_hist_gradient_boosting(numericas: list[str], categoricas: list[str]) -> Pipeline:
+    """Terceiro algoritmo, nativo do scikit-learn: boosting por histogramas, com
+    regularização equivalente à do LightGBM escolhido (árvores rasas, folhas grandes)."""
+    return Pipeline([
+        ("prep", preprocessador(numericas, categoricas, escalar=False)),
+        ("modelo", HistGradientBoostingClassifier(
+            max_iter=500, learning_rate=0.03, max_leaf_nodes=16, min_samples_leaf=900,
+            l2_regularization=1.0, early_stopping=False, random_state=SEED,
+        )),
     ])
 
 

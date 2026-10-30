@@ -25,7 +25,9 @@ Cada exigência do enunciado e onde ela é atendida no repositório.
 | Pré-processamento integrado ao modelo | `Pipeline` + `ColumnTransformer` (`src/modeling/pipeline.py`) |
 | Separação treino / validação / teste | treino 2023 com validação cruzada, teste 2024 |
 | Otimização e validação contra overfitting | `RandomizedSearchCV` + `GroupKFold`, análise do gap entre treino e validação (`notebooks/02`, seção 3) |
-| Replicabilidade e generalização | `random_state=42`, versões fixas, `python -m src.pipeline`, teste temporal |
+| Replicabilidade e generalização | `random_state=42`, versões fixas, `python -m src.pipeline` (testado do zero com métricas idênticas), teste temporal |
+| Comparação de algoritmos | logística, HistGradientBoosting, LightGBM e LightGBM ponderado (`notebooks/02`, seção 7) |
+| Boas práticas de ambiente produtivo | 18 testes automatizados (`tests/`, `python -m pytest`) |
 | Feature Importance e SHAP | `notebooks/03_interpretabilidade.ipynb` |
 
 ## Perguntas de negócio
@@ -44,8 +46,8 @@ Cada exigência do enunciado e onde ela é atendida no repositório.
 |---|---|
 | `data/`, `notebooks/`, `src/{preprocessing,modeling,evaluation,visualization}`, `reports/`, `images/` | estrutura do repositório |
 | `requirements.txt`, `README.md`, `.gitignore` | raiz |
-| Histórico de commits, branches, pull requests | PRs #1 a #5 (seção "Como o Git foi usado" do README) |
-| Documentação das decisões analíticas | `docs/decisoes.md` (D1 a D13) |
+| Histórico de commits, branches, pull requests | PRs #1 a #6 (seção "Como o Git foi usado" do README) |
+| Documentação das decisões analíticas | `docs/decisoes.md` (D1 a D16) |
 
 ## README
 
@@ -72,6 +74,6 @@ Cada exigência do enunciado e onde ela é atendida no repositório.
 | Notebooks ou scripts | ✅ 4 notebooks executados + scripts |
 | README detalhado | ✅ |
 | Documentação técnica | ✅ `docs/decisoes.md`, docstrings dos módulos |
-| Pipeline reproduzível | ✅ `python -m src.pipeline --notebooks` |
+| Pipeline reproduzível | ✅ `python -m src.pipeline --notebooks`; sem Google Cloud: `TC_AMOSTRA=1` com a amostra versionada |
 | Análises e visualizações | ✅ `images/` (EDA, modelagem, SHAP, mapas) |
 | **Vídeo executivo (até 5 min)** | ⏳ roteiro pronto em `reports/roteiro_video.md`; **falta gravar e colocar o link no README** |
