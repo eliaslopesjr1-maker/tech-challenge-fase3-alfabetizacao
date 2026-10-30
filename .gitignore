@@ -4,12 +4,15 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
-# Dados e modelos (reproduzíveis pelos scripts - grandes demais para o Git)
+# Dados completos (reproduzíveis pelos scripts - grandes demais para o Git).
+# A amostra em data/amostra/ e os modelos finais (~1 MB) são versionados para
+# que os notebooks rodem sem acesso ao BigQuery.
 data/raw/*
 data/gold/*
 !data/**/.gitkeep
 models/*
 !models/.gitkeep
+!models/*.joblib
 
 # Credenciais - nunca versionar
 *.json

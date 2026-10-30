@@ -101,9 +101,70 @@ def sensibilidade_territorio(treino: pd.DataFrame, futuro: pd.DataFrame) -> pd.D
     return pd.DataFrame(linhas).T
 
 
-def treinar_e_prever(treino: pd.DataFrame, futuro: pd.DataFrame, nome_modelo: str = "LightGBM"):
-    numericas, categoricas = colunas_modelo()
+def treinar_e_prever(treino: pd.DataFrame, futuro: pd.DataFrame, nome_modelo: str = "LightGBM",
+                     numericas: list[str] | None = None, categoricas: list[str] | None = None):
+    padrao_numericas, padrao_categoricas = colunas_modelo()
+    numericas = padrao_numericas if numericas is None else numericas
+    categoricas = padrao_categoricas if categoricas is None else categoricas
     pipeline = modelos(numericas, categoricas)[nome_modelo]
     pipeline.fit(treino[numericas + categoricas], treino[ALVO].astype(int))
     proba = pipeline.predict_proba(futuro[numericas + categoricas])[:, 1]
     return pipeline, proba
+
+
+LIMITE_CHOQUE_PP = 10
+
+
+def avaliar_cenario_neutro(treino: pd.DataFrame) -> dict:
+    """Validação do cenário neutro (só a situação da rede, sem contexto nem território)."""
+    y = treino[ALVO].astype(int)
+    pipeline = modelos(FEATURES_SITUACAO, [])["LightGBM"]
+    X = treino[FEATURES_SITUACAO]
+    estratificado = cross_val_predict(pipeline, X, y, cv=StratifiedKFold(5, shuffle=True, random_state=SEED),
+                                      method="predict_proba")[:, 1]
+    por_uf = cross_val_predict(pipeline, X, y, groups=treino["sigla_uf"], cv=GroupKFold(5),
+                               method="predict_proba")[:, 1]
+    return {"AUC (estratificado)": roc_auc_score(y, estratificado), "AUC (por UF)": roc_auc_score(y, por_uf),
+            "Brier": brier_score_loss(y, estratificado)}
+
+
+def choques_estaduais(treino: pd.DataFrame) -> pd.Series:
+    """Variação da taxa da rede municipal de cada UF no ano de treino (ponderada
+    pelos alunos), descontada a variação nacional, em pontos percentuais."""
+    peso = treino["alunos_avaliados"]
+    antes = (treino["taxa_atual"] * peso).groupby(treino["sigla_uf"]).sum() / peso.groupby(treino["sigla_uf"]).sum()
+    depois = (treino["taxa_ano_seguinte"] * peso).groupby(treino["sigla_uf"]).sum() / peso.groupby(treino["sigla_uf"]).sum()
+    nacional = np.average(treino["taxa_ano_seguinte"] - treino["taxa_atual"], weights=peso)
+    return (depois - antes - nacional).rename("choque_vs_brasil_pp")
+
+
+def prever_com_cenarios(treino: pd.DataFrame, futuro: pd.DataFrame) -> pd.DataFrame:
+    """Previsão conservadora para o ano seguinte.
+
+    Dois cenários:
+    - completo: contexto + UF/região, o mais bem validado;
+    - neutro: só a situação da rede (taxa, meta, distância, tamanho), que capta a
+      dinâmica nacional (regressão à média) sem padrão regional.
+
+    Com uma única transição de treino, o cenário completo repete o que aconteceu
+    em cada estado naquele ano. Nos estados com choque atípico (variação que se
+    afasta da nacional em mais de LIMITE_CHOQUE_PP pontos, como o RS em 2024, ano
+    das enchentes), esse padrão não deve ser projetado: ali se publica o cenário
+    neutro. Estados sem rede municipal no ano de treino não têm histórico e são
+    marcados com confiança baixa.
+    """
+    _, completo = treinar_e_prever(treino, futuro)
+    _, neutro = treinar_e_prever(treino, futuro, numericas=FEATURES_SITUACAO, categoricas=[])
+    choques = choques_estaduais(treino)
+    ufs_com_choque = set(choques[choques.abs() > LIMITE_CHOQUE_PP].index)
+    ufs_sem_historico = set(futuro["sigla_uf"]) - set(choques.index)
+
+    cenarios = pd.DataFrame({"proba_cenario_completo": completo, "proba_cenario_neutro": neutro}, index=futuro.index)
+    usa_neutro = futuro["sigla_uf"].isin(ufs_com_choque)
+    cenarios["proba_atingir_meta"] = np.where(usa_neutro, neutro, completo)
+    cenarios["confianca"] = np.select(
+        [usa_neutro, futuro["sigla_uf"].isin(ufs_sem_historico)],
+        ["baixa: UF com choque atípico no treino (cenário neutro)", "baixa: UF sem histórico no treino"],
+        default="normal",
+    )
+    return cenarios
