@@ -15,11 +15,14 @@ FEATURES_CATEGORICAS = ["sigla_uf", "nome_regiao", "rede_nome"]
 
 # Colunas do painel que NÃO são features:
 # - identificadores e nomes
+# - a nota e o alvo do aluno (proficiencia, alfabetizado, atingiu_ponto_corte):
+#   não estão no painel, mas ficam listadas como proteção contra uso acidental
 # - o resultado da própria avaliação (alunos_avaliados/alfabetizados e taxa
 #   são calculados com as notas do ano que se quer prever → leakage)
 # - taxa_ano_anterior: só existe para 2024 (usada apenas no modelo de metas)
 NAO_FEATURES = {
     "ano", "id_municipio", "rede", "nome_municipio",
+    "proficiencia", "alfabetizado", "atingiu_ponto_corte", "peso_aluno",
     "alunos_avaliados", "alunos_alfabetizados", "taxa_alfabetizacao", "taxa_ano_anterior",
     *FEATURES_CATEGORICAS,
 }
@@ -48,7 +51,7 @@ def carregar_base_alunos(alunos_por_ano: int | None = 300_000, seed: int = SEED)
     alunos = alunos[alunos["rede"].isin(["2", "3"])].rename(columns={"atingiu_ponto_corte": ALVO})
     alunos[ALVO] = alunos[ALVO].astype("int8")
 
-    if alunos_por_ano is not None:
+    if alunos_por_ano is not None and alunos.groupby("ano").size().min() > alunos_por_ano:
         alunos = alunos.groupby("ano").sample(n=alunos_por_ano, random_state=seed).reset_index(drop=True)
 
     painel = carregar_painel()
