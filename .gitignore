@@ -14,4 +14,5 @@ models/*
 # Credenciais - nunca versionar
 *.json
 !**/package.json
+!reports/*.json
 .env
