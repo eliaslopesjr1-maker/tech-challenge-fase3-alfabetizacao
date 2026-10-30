@@ -1,0 +1,119 @@
+{
+  "dados": {
+    "alunos_treino": 300000,
+    "alunos_teste": 300000,
+    "features_numericas": [
+      "escolas_com_2_ano",
+      "matriculas_2_ano",
+      "pct_alunos_escola_rural",
+      "pct_alunos_area_diferenciada",
+      "pct_biblioteca_ou_sala_leitura",
+      "pct_agua_potavel",
+      "pct_esgoto_rede_publica",
+      "pct_internet_alunos",
+      "pct_banda_larga",
+      "pct_laboratorio_informatica",
+      "pct_quadra_esportes",
+      "pct_parque_infantil",
+      "pct_material_pedagogico_infantil",
+      "pct_coordenador_pedagogico",
+      "pct_psicologo",
+      "pct_bibliotecario",
+      "pct_educacao_indigena",
+      "alunos_por_turma_ai",
+      "alunos_por_docente_ai",
+      "pct_matricula_integral_ai",
+      "pct_residencia_rural",
+      "pct_transporte_escolar",
+      "tamanho_medio_escola",
+      "atu_ef_2_ano",
+      "had_ef_anos_iniciais",
+      "tdi_ef_anos_iniciais",
+      "taxa_aprovacao_ef_2_ano",
+      "taxa_abandono_ef_anos_iniciais",
+      "dsu_ef_anos_iniciais",
+      "afd_ef_anos_iniciais_grupo_1",
+      "inse_medio",
+      "pct_alunos_inse_baixo",
+      "pib_per_capita",
+      "log_populacao",
+      "idhm",
+      "idhm_e",
+      "idhm_l",
+      "idhm_r",
+      "indice_gini",
+      "renda_pc",
+      "prop_pobreza_criancas",
+      "taxa_analfabetismo_15_mais",
+      "taxa_criancas_dom_sem_fund",
+      "taxa_freq_4_5",
+      "pct_populacao_rural_2010",
+      "capital_uf",
+      "amazonia_legal"
+    ],
+    "features_categoricas": [
+      "sigla_uf",
+      "nome_regiao",
+      "rede_nome"
+    ],
+    "proporcao_nao_alfabetizados_teste": 0.4016266666666667
+  },
+  "validacao_cruzada": {
+    "logistica_auc": [
+      0.6467813463423197,
+      0.014283843444637389
+    ],
+    "logistica_auc_treino": 0.6540229608623053,
+    "lightgbm_auc": [
+      0.6480197943772075,
+      0.008160403212654821
+    ],
+    "lightgbm_auc_treino": 0.6797745619962956,
+    "lightgbm_melhores_parametros": {
+      "colsample_bytree": 0.954660201039391,
+      "learning_rate": 0.020153425505297702,
+      "min_child_samples": 921,
+      "n_estimators": 587,
+      "num_leaves": 16,
+      "reg_lambda": 0.951253833658495
+    }
+  },
+  "lightgbm_auc_treino_completo": 0.6771536498785435,
+  "limiar_escolhido_no_treino": 0.645,
+  "teste_2024": {
+    "logistica (limiar 0,5)": {
+      "roc_auc": 0.621,
+      "pr_auc_alfabetizado": 0.705,
+      "pr_auc_nao_alfabetizado": 0.5161,
+      "brier": 0.2292,
+      "f1_macro": 0.5491,
+      "recall_nao_alfabetizado": 0.2664,
+      "precisao_nao_alfabetizado": 0.5723,
+      "recall_alfabetizado": 0.8664,
+      "limiar": 0.5
+    },
+    "lightgbm (limiar 0,5)": {
+      "roc_auc": 0.6307,
+      "pr_auc_alfabetizado": 0.714,
+      "pr_auc_nao_alfabetizado": 0.5258,
+      "brier": 0.2271,
+      "f1_macro": 0.561,
+      "recall_nao_alfabetizado": 0.2936,
+      "precisao_nao_alfabetizado": 0.5742,
+      "recall_alfabetizado": 0.8539,
+      "limiar": 0.5
+    },
+    "lightgbm (limiar 0.645)": {
+      "roc_auc": 0.6307,
+      "pr_auc_alfabetizado": 0.714,
+      "pr_auc_nao_alfabetizado": 0.5258,
+      "brier": 0.2271,
+      "f1_macro": 0.5329,
+      "recall_nao_alfabetizado": 0.7801,
+      "precisao_nao_alfabetizado": 0.4552,
+      "recall_alfabetizado": 0.3733,
+      "limiar": 0.645
+    }
+  },
+  "teto_teorico_auc": 0.6976056707900062
+}
