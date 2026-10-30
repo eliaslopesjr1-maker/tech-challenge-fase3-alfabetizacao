@@ -79,6 +79,27 @@ def distribuicao_por_grupo(df: pd.DataFrame, valor: str, grupo: str, salvar: str
     return _finalizar(fig, salvar)
 
 
+def resultado_vs_meta_uf(df: pd.DataFrame, salvar: str | None = None, titulo: str = "") -> plt.Figure:
+    """Por UF: resultado de 2024 e de 2025 (seta) contra a meta de 2025 (traço).
+    df: índice sigla_uf, colunas 2024, 2025, meta_2025, nome_regiao."""
+    df = df.sort_values(2025)
+    fig, ax = plt.subplots(figsize=(8.5, 8.5))
+    y = np.arange(len(df))
+    cores = df["nome_regiao"].map(CORES_REGIAO)
+    for i, (_, linha) in enumerate(df.iterrows()):
+        if pd.notna(linha[2024]):
+            ax.annotate("", xy=(linha[2025], i), xytext=(linha[2024], i),
+                        arrowprops={"arrowstyle": "->", "color": cores.iloc[i], "lw": 1.8})
+    ax.scatter(df[2025], y, color=cores, s=45, zorder=3, label="resultado 2025")
+    ax.scatter(df["meta_2025"], y, marker="|", s=250, color="black", zorder=4, label="meta 2025")
+    ax.set_yticks(y, df.index)
+    ax.set(title=titulo, xlabel="% de crianças alfabetizadas (rede pública)", xlim=(25, 92))
+    handles = [plt.Line2D([], [], color=c, lw=2) for c in CORES_REGIAO.values()]
+    handles += [plt.Line2D([], [], color="black", marker="|", markersize=12, lw=0)]
+    ax.legend(handles, [*CORES_REGIAO.keys(), "meta 2025"], loc="lower right", fontsize=8)
+    return _finalizar(fig, salvar)
+
+
 def histograma(serie: pd.Series, salvar: str | None = None, titulo: str = "", xlabel: str = "",
                linha: float | None = None, rotulo_linha: str = "") -> plt.Figure:
     fig, ax = plt.subplots(figsize=(8, 4))
