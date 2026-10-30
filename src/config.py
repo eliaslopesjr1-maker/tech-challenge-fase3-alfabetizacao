@@ -5,8 +5,13 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 DIR_DADOS = RAIZ / "data"
-DIR_RAW = DIR_DADOS / "raw"
-DIR_GOLD = DIR_DADOS / "gold"
+
+# Com TC_AMOSTRA=1, notebooks e funções leem a amostra versionada em data/amostra/
+# (gerada por src/preprocessing/gerar_amostra.py), sem precisar do BigQuery.
+USAR_AMOSTRA = os.environ.get("TC_AMOSTRA") == "1"
+DIR_AMOSTRA = DIR_DADOS / "amostra"
+DIR_RAW = (DIR_AMOSTRA if USAR_AMOSTRA else DIR_DADOS) / "raw"
+DIR_GOLD = (DIR_AMOSTRA if USAR_AMOSTRA else DIR_DADOS) / "gold"
 DIR_MODELOS = RAIZ / "models"
 DIR_REPORTS = RAIZ / "reports"
 DIR_IMAGENS = RAIZ / "images"
