@@ -1,0 +1,15 @@
+treino 2023: 300,000 alunos | teste 2024: 300,000 alunos | 47 numéricas + 3 categóricas
+logística   CV AUC 0.6468 ± 0.0143
+Fitting 5 folds for each of 12 candidates, totalling 60 fits
+LightGBM    CV AUC 0.6480 ± 0.0082 (treino 0.6798) | {'colsample_bytree': np.float64(0.954660201039391), 'learning_rate': np.float64(0.020153425505297702), 'min_child_samples': 921, 'n_estimators': 587, 'num_leaves': 16, 'reg_lambda': np.float64(0.951253833658495)}
+limiar para 80% de recall dos não alfabetizados (OOF treino): 0.645
+
+Teste 2024:
+                          roc_auc  pr_auc_alfabetizado  pr_auc_nao_alfabetizado   brier  f1_macro  recall_nao_alfabetizado  precisao_nao_alfabetizado  recall_alfabetizado  limiar
+logistica (limiar 0,5)    0.6210                0.705                   0.5161  0.2292    0.5491                   0.2664                     0.5723               0.8664   0.500
+lightgbm (limiar 0,5)     0.6307                0.714                   0.5258  0.2271    0.5610                   0.2936                     0.5742               0.8539   0.500
+lightgbm (limiar 0.645)   0.6307                0.714                   0.5258  0.2271    0.5329                   0.7801                     0.4552               0.3733   0.645
+
+teto teórico (oráculo município x rede): AUC 0.6976
+
+concluído em 31.1 min
