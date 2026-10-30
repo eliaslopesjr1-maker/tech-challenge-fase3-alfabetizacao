@@ -9,7 +9,10 @@ Cada exigência do enunciado e onde ela é atendida no repositório.
 | Modelo supervisionado que prevê aluno alfabetizado / não alfabetizado | `src/modeling/treinar_aluno.py`, `notebooks/02_modelagem_aluno.ipynb` |
 | Variáveis educacionais, territoriais e socioeconômicas | 47 features numéricas + UF, região e rede (`src/preprocessing/construir_features.py`) |
 | Dados da camada Gold da Fase 2 | `src/preprocessing/construir_gold.py` reproduz a Silver/Gold da Fase 2 |
-| Indicador, metas nacionais/estaduais/municipais, dados territoriais e populacionais | `data/gold/*` + `src/modeling/base_municipal.py` |
+| Indicador e metas **nacionais** | `notebooks/01_eda.ipynb`, seção 1 (trajetória Brasil x meta) |
+| Metas **estaduais** | `notebooks/01_eda.ipynb`, seção 5b (UFs 2023-2025 x meta); `notebooks/04`, validação externa |
+| Metas **municipais** | `notebooks/01_eda.ipynb`, seção 5; `notebooks/04`, modelo de metas |
+| Dados territoriais, socioeconômicos, populacionais e indicadores temporais | `data/gold/painel_municipio_rede.parquet` (2023-2024, taxa do ano anterior) |
 | Enriquecimento com fontes externas | Censo Escolar, Indicadores Educacionais, INSE, IBGE (PIB, população), Atlas IDHM (`src/preprocessing/extrair_enriquecimento.py`) |
 
 ## Etapas esperadas
@@ -46,7 +49,7 @@ Cada exigência do enunciado e onde ela é atendida no repositório.
 |---|---|
 | `data/`, `notebooks/`, `src/{preprocessing,modeling,evaluation,visualization}`, `reports/`, `images/` | estrutura do repositório |
 | `requirements.txt`, `README.md`, `.gitignore` | raiz |
-| Histórico de commits, branches, pull requests | PRs #1 a #6 (seção "Como o Git foi usado" do README) |
+| Histórico de commits, branches, pull requests | PRs #1 a #7 (seção "Como o Git foi usado" do README) |
 | Documentação das decisões analíticas | `docs/decisoes.md` (D1 a D16) |
 
 ## README
