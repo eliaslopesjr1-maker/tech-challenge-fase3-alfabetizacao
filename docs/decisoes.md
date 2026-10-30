@@ -66,14 +66,27 @@ município × rede: folhas pequenas decorariam municípios. O limiar de decisão
 nas predições *out-of-fold* do treino para identificar 80% dos não alfabetizados. No teste de
 2024 ele identificou 78%.
 
-### D10. Interpretação por tema, não por coeficiente
+### D10. Quatro candidatos e peso amostral
+Logística, HistGradientBoosting, LightGBM e LightGBM com `sample_weight=peso_aluno` foram
+comparados com a mesma validação e o mesmo teste, medindo o AUC simples e o ponderado. Os dois
+boostings empatam (AUC de 0,631 no teste) e o peso amostral não muda o resultado. O LightGBM sem
+peso foi mantido: o limite está nos dados, e a conclusão vale para a população de alunos.
+
+### D11. Testes automatizados e amostra versionada
+18 testes com pytest cobrem as regras da Gold, a qualidade, as garantias contra leakage, os
+pipelines, as métricas e as regras do modelo de metas. Eles encontraram dois problemas, ambos
+corrigidos: o limiar era arredondado depois de testado, e a lista de colunas proibidas não citava
+explicitamente a nota e o alvo do aluno. A amostra em `data/amostra/` (6 MB) e os modelos finais
+são versionados para que os notebooks rodem com `TC_AMOSTRA=1`, sem conta no Google Cloud.
+
+### D12. Interpretação por tema, não por coeficiente
 Com variáveis socioeconômicas quase redundantes, os coeficientes da logística trocam de sinal.
 As conclusões usam o SHAP somado por tema, em que efeitos de variáveis correlacionadas se compensam
 dentro do grupo.
 
 ## Aplicação estratégica
 
-### D11. Modelo de metas como transição "ano atual → ano seguinte"
+### D13. Modelo de metas como transição "ano atual → ano seguinte"
 Treinado com a situação de 2023 (taxa, meta de 2024, contexto) para prever se a rede atingiu a
 meta de 2024, e aplicado à situação de 2024 para prever a meta de 2025. A validação é feita de duas
 formas: estratificada (municípios novos, AUC 0,81) e por UF (estados novos, AUC 0,59). A UF foi
@@ -81,13 +94,21 @@ mantida por ter a melhor validação, e a dependência do território está docu
 de sensibilidade. Com uma só transição, choques como as enchentes no RS em 2024 contaminam a
 previsão de 2025.
 
-### D12. Índice de risco com três componentes
+### D14. Índice de risco com três componentes
 Média dos percentis de: (1) taxa observada, (2) taxa esperada pelo contexto (modelo do aluno) e
 (3) probabilidade de não atingir a meta. Redes com menos de 20 alunos avaliados ficam fora dos
 rankings exibidos, porque a taxa delas é instável. O ranking por número de crianças não
 alfabetizadas complementa o índice, mostrando alcance em vez de gravidade.
 
-### D13. Clusterização só com contexto, k = 5
+### D15. Previsão de metas conservadora diante de choques estaduais
+Com uma única transição de treino, o modelo completo repete o que aconteceu em cada estado
+naquele ano. Retirar a UF não resolve, porque o contexto também identifica o perfil regional. A
+regra adotada usa o **cenário neutro** (só taxa, meta, distância e tamanho da rede) nos estados
+cuja variação 2023 → 2024 se afastou da nacional em mais de 10 p.p. (RS, -22 p.p., ano das
+enchentes; MG, +10 p.p.). Os estados sem histórico (SP e AC) ficam com confiança baixa. O limite de
+10 p.p. é uma escolha de projeto: os demais estados ficaram dentro de ±7 p.p.
+
+### D16. Clusterização só com contexto, k = 5
 O KMeans usa 12 variáveis de contexto padronizadas, sem o resultado da prova, para que dê para
 comparar o desempenho de municípios parecidos. A silhueta é estável (~0,15) de k = 4 a 8. O k = 5
 foi escolhido porque separa as áreas indígenas, quilombolas e de assentamento, que pedem política

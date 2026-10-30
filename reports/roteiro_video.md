@@ -67,9 +67,9 @@ Criança Alfabetizada.
 > risco, além de Sergipe, Rio Grande do Norte, Amazonas e Pará. Por **volume**: só a rede de São
 > Paulo tem 21 mil crianças não alfabetizadas, seguida de Rio, Manaus e Salvador."
 
-> "Para 2025, o modelo prevê que cerca de 1.500 redes têm menos de 40% de chance de atingir a
-> meta. No Rio Grande do Sul, essa previsão ainda reflete o impacto das enchentes de 2024 e
-> será recalibrada com os dados de 2025."
+> "Para 2025, o modelo prevê que cerca de 1.400 redes têm menos de 40% de chance de atingir a
+> meta, a maioria na Bahia, onde o risco é estrutural. No Rio Grande do Sul, a queda de 2024 foi
+> um choque das enchentes, e o modelo foi desenhado para não projetar esse choque como tendência."
 
 ## 6. Recomendações e valor estratégico (3:50 - 4:40)
 
