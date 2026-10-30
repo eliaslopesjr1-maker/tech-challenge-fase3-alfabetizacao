@@ -1,10 +1,21 @@
 # Tech Challenge Fase 3 - Predição e Inteligência Analítica para Alfabetização no Brasil
 
-> README em construção. As seções de insights consolidados, evoluções futuras e vídeo serão completadas na etapa final.
-
 Continuação do [Tech Challenge Fase 2](https://github.com/eliaslopesjr1-maker/tech-challenge-fase2-alfabetizacao).
 A camada Gold construída lá é usada aqui para análise exploratória e modelos de Machine Learning
 sobre o **Indicador Criança Alfabetizada**.
+
+> **Em uma frase:** o contexto socioeconômico importa, mas não é destino. A trajetória escolar e
+> a política estadual pesam mais que a renda, e municípios com a mesma pobreza chegam a ter
+> 21 pontos de diferença na alfabetização.
+
+**Sumário:** [Contexto](#contexto-do-problema) · [Objetivo](#objetivo-analítico) ·
+[Base](#base-de-dados) · [EDA](#principais-achados-da-análise-exploratória) ·
+[Modelagem](#etapas-de-modelagem) · [Algoritmo](#escolha-do-algoritmo) ·
+[Métricas](#métricas-de-avaliação) · [Interpretação](#interpretação-dos-resultados) ·
+[Aplicação estratégica](#aplicação-estratégica) · [Perguntas de negócio](#respostas-às-perguntas-de-negócio) ·
+[Insights](#insights-encontrados) · [Políticas públicas](#aplicação-prática-para-políticas-públicas) ·
+[Limitações](#limitações-do-projeto) · [Evoluções futuras](#possíveis-evoluções-futuras) ·
+[Vídeo](#vídeo-executivo) · [Como reproduzir](#como-reproduzir)
 
 ## Contexto do problema
 
@@ -222,6 +233,27 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
   sensibilidade, com e sem UF, está no notebook. O modelo deve ser retreinado com os resultados
   municipais de 2025.
 
+## Insights encontrados
+
+1. **A desigualdade é territorial e enorme:** de 36% (BA) a 85% (CE) em 2024. Dentro de cada região,
+   a variação entre municípios é ainda maior que entre regiões.
+2. **A trajetória escolar é o fator nº 1 (31% da importância).** Distorção idade-série acima de ~8%
+   e qualquer abandono acima de ~0,5% nos anos iniciais derrubam a chance de alfabetização.
+3. **Política estadual é o fator nº 2 (30%).** Descontado o contexto, o Ceará alfabetiza muito mais
+   do que sua renda faria esperar. SE, RN, TO e BA entregam menos do que o contexto permitiria.
+4. **Pobreza não é destino.** O nível socioeconômico vem só em 3º lugar (19%). Grupos de municípios
+   com a mesma pobreza têm 63% contra 42% de alfabetização, conforme o fluxo escolar.
+5. **Há referências em todos os perfis:** municípios 30 a 50 pontos acima do esperado mesmo em
+   contextos difíceis, candidatos a estudo de caso.
+6. **As grandes cidades concentram o volume:** São Paulo, Rio, Manaus e Salvador somam ~54 mil
+   crianças não alfabetizadas nas redes municipais. São Paulo e Guarulhos ficam abaixo do esperado.
+7. **Bater a meta exige constância:** a regra "já estou acima da meta" acerta tanto quanto o acaso,
+   por causa da regressão à média. Choques estaduais, como as enchentes no RS, mudam o resultado
+   de um ano para o outro.
+8. **Prever a criança é diferente de prever a rede.** Com dados públicos, o teto individual é
+   AUC ~0,70, porque família e sala de aula não estão nos dados. No nível da rede, o modelo é bem
+   calibrado e útil para priorizar.
+
 ## Aplicação prática para políticas públicas
 
 1. **Priorização de recursos:** o ranking de risco orienta o apoio técnico e financeiro do
@@ -260,6 +292,31 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
   tudo o que é comum ao estado e não está nas features, e a ligação com programas como o PAIC é uma
   hipótese consistente com a literatura, não uma prova causal.
 
+## Possíveis evoluções futuras
+
+- **Retreinar com os resultados municipais de 2025**, assim que forem publicados: duas transições
+  para o modelo de metas e validação temporal real de 2024 → 2025.
+- **Dados da escola e do aluno:** com acesso aos microdados identificados do Inep (sala segura),
+  ligar o aluno à escola real do Censo e ao questionário socioeconômico do Saeb, superando o teto
+  de ~0,70.
+- **Modelos hierárquicos** (aluno → escola → município → estado), que separam melhor o efeito de
+  cada nível e tratam a incerteza de redes pequenas (*shrinkage*).
+- **Inferência causal sobre políticas estaduais:** diferenças-em-diferenças ou controle sintético
+  para medir o impacto de programas como o PAIC, indo além da associação.
+- **Monitoramento em produção:** retreino a cada ciclo, alerta de *drift* de calibração por região
+  e MLflow para versionar modelos e métricas.
+- **Painel para gestores** (Databricks SQL, Power BI ou Streamlit) com o ranking de risco, os grupos
+  de contexto e as referências de cada município.
+- **Novas fontes:** frequência escolar (Sistema Presença / Bolsa Família), CadÚnico e formação
+  continuada de alfabetizadores.
+
+## Vídeo executivo
+
+- **Link do vídeo:** *(adicionar após a gravação)*
+- **Roteiro:** [`reports/roteiro_video.md`](reports/roteiro_video.md). É uma reunião simulada com
+  gestores públicos, com o problema, os principais insights, o valor estratégico e as recomendações,
+  em até 5 minutos.
+
 ## Como reproduzir
 
 Pré-requisitos: Python 3.13 e acesso a um projeto do Google Cloud. A consulta à Base dos Dados fica
@@ -273,26 +330,35 @@ pip install -r requirements.txt
 gcloud auth application-default login
 set GCP_PROJECT_ID=<seu-projeto>   # opcional; padrão em src/config.py
 
-python -m src.preprocessing.extrair_dados           # Bronze: tabelas do Inep -> data/raw/
-python -m src.preprocessing.extrair_enriquecimento  # fontes externas -> data/raw/
-python -m src.preprocessing.construir_gold          # Silver + Gold -> data/gold/
-python -m src.preprocessing.construir_features      # painel analítico -> data/gold/
-python -m src.modeling.treinar_aluno                # modelo do aluno -> models/ e reports/ (~30 min)
+python -m src.pipeline --notebooks   # tudo, de ponta a ponta (~45 min na primeira vez)
 ```
 
-Depois é só abrir os notebooks em `notebooks/`, em ordem. Todos usam `random_state=42`.
+O pipeline executa, em ordem:
+
+| Etapa | Comando isolado | Saída |
+|---|---|---|
+| Bronze | `python -m src.preprocessing.extrair_dados` | tabelas do Inep e diretórios em `data/raw/` |
+| Enriquecimento | `python -m src.preprocessing.extrair_enriquecimento` | fontes externas em `data/raw/` |
+| Silver + Gold | `python -m src.preprocessing.construir_gold` | `data/gold/` + relatório de qualidade |
+| Painel analítico | `python -m src.preprocessing.construir_features` | `data/gold/painel_municipio_rede.parquet` |
+| Modelo do aluno | `python -m src.modeling.treinar_aluno` | `models/`, `reports/` (~30 min) |
+| Notebooks | `--notebooks` | gráficos em `images/` e relatórios em `reports/` |
+
+Para recomeçar de uma etapa: `python -m src.pipeline --a-partir-de treinar_aluno --notebooks`.
+Tudo usa `random_state=42` e versões fixas no `requirements.txt`.
 
 ## Estrutura
 
 ```
 ├── data/            # raw/ (Bronze) e gold/ - gerados pelos scripts, fora do Git
-├── notebooks/       # 01_eda, modelagem, interpretabilidade, aplicação estratégica
+├── notebooks/       # 01_eda, 02_modelagem_aluno, 03_interpretabilidade, 04_aplicacao_estrategica
 ├── src/
+│   ├── pipeline.py      # executa tudo com um comando
 │   ├── preprocessing/   # extração (BigQuery), Gold, features e checagens de qualidade
-│   ├── modeling/        # base de modelagem, pipelines e treino
-│   ├── evaluation/      # métricas e gráficos de avaliação
+│   ├── modeling/        # modelo do aluno, modelo de metas, risco e clusterização
+│   ├── evaluation/      # métricas, avaliação e interpretabilidade (SHAP)
 │   └── visualization/   # funções de gráfico
-├── reports/
+├── reports/         # métricas, rankings e previsões para gestores, roteiro do vídeo
 ├── images/          # gráficos usados no README e no vídeo
 ├── docs/            # decisões analíticas
 └── models/          # modelos treinados - fora do Git
@@ -301,7 +367,16 @@ Depois é só abrir os notebooks em `notebooks/`, em ordem. Todos usam `random_s
 ## Como o Git foi usado
 
 - A `main` contém sempre a versão estável e revisada.
-- Cada etapa é desenvolvida numa branch própria (`feature/eda`, `feature/modelagem`, ...) e
-  integrada por **Pull Request**, com a descrição do que foi feito e das decisões tomadas.
+- Cada etapa foi desenvolvida numa branch própria e integrada por **Pull Request**, com a descrição
+  do que foi feito, dos resultados e das decisões tomadas:
+
+  | PR | Branch | Etapa |
+  |---|---|---|
+  | #1 | `feature/eda` | enriquecimento externo e análise exploratória |
+  | #2 | `feature/modelagem` | modelo supervisionado do aluno |
+  | #3 | `feature/interpretabilidade` | SHAP, permutation importance e efeito por estado |
+  | #4 | `feature/aplicacao-estrategica` | metas 2025, risco municipal e grupos de contexto |
+  | #5 | `feature/fechamento` | pipeline único, insights, evoluções futuras e roteiro do vídeo |
+
 - Os commits são pequenos e descrevem o *porquê* da mudança.
 - As decisões analíticas ficam registradas em [`docs/decisoes.md`](docs/decisoes.md).
