@@ -67,9 +67,12 @@ Criança Alfabetizada.
 > risco, além de Sergipe, Rio Grande do Norte, Amazonas e Pará. Por **volume**: só a rede de São
 > Paulo tem 21 mil crianças não alfabetizadas, seguida de Rio, Manaus e Salvador."
 
-> "Para 2025, o modelo prevê que cerca de 1.400 redes têm menos de 40% de chance de atingir a
-> meta, a maioria na Bahia, onde o risco é estrutural. No Rio Grande do Sul, a queda de 2024 foi
-> um choque das enchentes, e o modelo foi desenhado para não projetar esse choque como tendência."
+> "Comparamos a previsão com o que de fato aconteceu em 2025 nos estados. O modelo acertou a
+> direção: os estados que ele apontava como mais seguros bateram a meta. Mas foi conservador: 2025
+> teve um avanço muito maior que o esperado, e a Bahia, apontada como a mais crítica, deu o maior
+> salto do país, de 36% para 55%. A leitura para a gestão é dupla. A Bahia continua entre as menores
+> taxas e precisa de prioridade, e o que mudou lá em 2025 merece ser estudado. O modelo serve para
+> priorizar, e será recalibrado com os dados municipais de 2025."
 
 ## 6. Recomendações e valor estratégico (3:50 - 4:40)
 
