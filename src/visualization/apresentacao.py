@@ -1,8 +1,11 @@
 """Gera a apresentação executiva (reports/apresentacao_executiva.pptx) usada no vídeo.
 
-Um slide por pergunta de negócio, com a resposta e os dados que a sustentam.
-As notas do apresentador trazem a fala de cada slide (~5 minutos no total).
+Estrutura: abertura (problema e método), as 5 perguntas de negócio e o fechamento
+(recomendações). Cada pergunta ocupa 1 ou 2 slides:
+- o 1º traz a PERGUNTA como título, a resposta direta logo abaixo e o dado principal;
+- o 2º (quando há) traz a evidência que sustenta ou detalha a resposta.
 
+As notas do apresentador trazem a fala de cada slide (~5 minutos no total).
 Os números vêm dos notebooks 01 a 04 e de reports/; os gráficos, de images/.
 
 Uso:
@@ -11,16 +14,29 @@ Uso:
 
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import pandas as pd
+from matplotlib.colors import LinearSegmentedColormap
 from PIL import Image
 from pptx import Presentation
 from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
-from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION, XL_LEGEND_POSITION
+from pptx.enum.chart import (
+    XL_CHART_TYPE, XL_LABEL_POSITION, XL_LEGEND_POSITION, XL_TICK_LABEL_POSITION, XL_TICK_MARK,
+)
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
-from src.config import DIR_IMAGENS, DIR_REPORTS
+from src.config import DIR_IMAGENS, DIR_RAW, DIR_REPORTS
+
+AUTOR = "Elias Lopes Silva Junior"
+FONTE_DADOS = ("Fonte: Inep (Avaliação de Alfabetização 2023-2024, metas e resultados 2025), via Base dos Dados; "
+               "Censo Escolar, IBGE e Atlas do Desenvolvimento Humano. Elaboração própria.")
 
 # Paleta dos gráficos do projeto (src/visualization/graficos.py)
 ESCURO = RGBColor(0x26, 0x46, 0x53)
@@ -33,12 +49,15 @@ SUAVE = RGBColor(0x5B, 0x6B, 0x72)
 CARTAO = RGBColor(0xEE, 0xF3, 0xF2)
 BRANCO = RGBColor(0xFF, 0xFF, 0xFF)
 CLARO = RGBColor(0xCF, 0xE3, 0xE0)
+ESCURO_CARTAO = RGBColor(0x2F, 0x56, 0x65)
 
 TITULO_FONTE = "Cambria"
 CORPO_FONTE = "Calibri"
 
 LARGURA, ALTURA = Inches(13.333), Inches(7.5)
 MARGEM = Inches(0.6)
+TOPO_PERGUNTA = Inches(2.4)    # início do conteúdo nos slides com pergunta + resposta
+TOPO_EVIDENCIA = Inches(1.95)  # início do conteúdo nos demais slides
 
 
 # ---------------------------------------------------------------------------
@@ -118,27 +137,104 @@ def fundo(slide, cor):
     slide.background.fill.fore_color.rgb = cor
 
 
-def cabecalho(slide, titulo, rotulo=None, numero=None):
-    """Título na mesma posição em todos os slides de conteúdo; acima dele, a
-    pergunta de negócio (com o número no círculo coral, o motivo visual do deck)."""
-    if rotulo:
-        x_rotulo = MARGEM
-        if numero:
-            circulo(slide, MARGEM, Inches(0.38), Inches(0.42), str(numero), tamanho=15)
-            x_rotulo = MARGEM + Inches(0.55)
-        texto(slide, x_rotulo, Inches(0.42), Inches(11), Inches(0.4), rotulo, tamanho=14, cor=CORAL, negrito=True,
-              ancora=MSO_ANCHOR.MIDDLE)
+def novo_slide(prs):
+    return prs.slides.add_slide(prs.slide_layouts[6])
+
+
+def rodape(slide):
+    texto(slide, MARGEM, Inches(7.08), LARGURA - 2 * MARGEM, Inches(0.3), FONTE_DADOS, tamanho=9, cor=SUAVE)
+
+
+def cabecalho(slide, titulo, rotulo):
+    """Slides de abertura e fechamento: rótulo coral + título."""
+    rodape(slide)
+    texto(slide, MARGEM, Inches(0.42), Inches(11), Inches(0.4), rotulo, tamanho=14, cor=CORAL, negrito=True,
+          ancora=MSO_ANCHOR.MIDDLE)
     texto(slide, MARGEM, Inches(0.92), LARGURA - 2 * MARGEM, Inches(0.8), titulo, tamanho=30, cor=ESCURO,
           negrito=True, fonte=TITULO_FONTE)
 
 
-def imagem(slide, caminho, x, y, w_max, h_max, alinhar="centro"):
-    """Insere a imagem no maior tamanho que cabe na caixa, mantendo a proporção."""
+def cabecalho_pergunta(slide, numero, pergunta, resposta=None, evidencia=None):
+    """Slides das perguntas. O título fica sempre na mesma posição:
+    - 1º slide: a pergunta é o título e a resposta direta vem logo abaixo;
+    - 2º slide: o título é a evidência, e o rótulo lembra a qual pergunta ela responde."""
+    rodape(slide)
+    circulo(slide, MARGEM, Inches(0.38), Inches(0.42), str(numero), tamanho=15)
+    rotulo = f"PERGUNTA {numero} DE 5" if evidencia is None else f"PERGUNTA {numero} · EVIDÊNCIA"
+    texto(slide, MARGEM + Inches(0.55), Inches(0.42), Inches(10), Inches(0.4), rotulo, tamanho=14, cor=CORAL,
+          negrito=True, ancora=MSO_ANCHOR.MIDDLE)
+    texto(slide, MARGEM, Inches(0.92), LARGURA - 2 * MARGEM, Inches(0.8), evidencia or pergunta, tamanho=30,
+          cor=ESCURO, negrito=True, fonte=TITULO_FONTE)
+    if resposta:
+        texto(slide, MARGEM, Inches(1.68), LARGURA - 2 * MARGEM, Inches(0.5),
+              [[("Resposta: ", {"cor": CORAL, "negrito": True}), (resposta, {"cor": TEAL, "negrito": True})]],
+              tamanho=20)
+
+
+def imagem(slide, caminho, x, y, w_max, h_max, descricao, alinhar="centro"):
+    """Insere a imagem no maior tamanho que cabe na caixa, mantendo a proporção,
+    com texto alternativo descritivo (leitores de tela)."""
     largura_px, altura_px = Image.open(caminho).size
     escala = min(w_max / largura_px, h_max / altura_px)
     w, h = int(largura_px * escala), int(altura_px * escala)
     dx = (w_max - w) // 2 if alinhar == "centro" else 0
-    return slide.shapes.add_picture(str(caminho), x + dx, y + (h_max - h) // 2, w, h)
+    figura = slide.shapes.add_picture(str(caminho), x + dx, y + (h_max - h) // 2, w, h)
+    figura._element.nvPicPr.cNvPr.set("descr", descricao)
+    return figura
+
+
+# ---------------------------------------------------------------------------
+# Mapas limpos (sem eixos de latitude/longitude), gerados a partir de reports/
+# ---------------------------------------------------------------------------
+
+CORES_GRUPO = {
+    "Pequenos municípios desenvolvidos": "#264653",
+    "Vulnerável com fluxo escolar regular": "#2a9d8f",
+    "Urbano de maior porte": "#e9c46a",
+    "Áreas diferenciadas e rurais": "#f4a261",
+    "Vulnerável com fluxo escolar crítico": "#e76f51",
+}
+
+
+def _coordenadas():
+    return pd.read_parquet(DIR_RAW / "diretorio_municipio.parquet",
+                           columns=["id_municipio", "longitude", "latitude"]).astype({"id_municipio": str})
+
+
+def _salvar_mapa(fig, nome):
+    caminho = DIR_IMAGENS / nome
+    fig.savefig(caminho, dpi=200, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return caminho
+
+
+def mapa_risco():
+    ranking = pd.read_csv(DIR_REPORTS / "ranking_risco_municipios_2024.csv", dtype={"id_municipio": str})
+    dados = ranking.merge(_coordenadas(), on="id_municipio").sort_values("indice_risco")
+    paleta = LinearSegmentedColormap.from_list("risco", ["#2a9d8f", "#e9c46a", "#e76f51", "#9b2226"])
+    fig, ax = plt.subplots(figsize=(6, 6.2))
+    pontos = ax.scatter(dados["longitude"], dados["latitude"], c=dados["indice_risco"], cmap=paleta, s=5,
+                        linewidths=0)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    barra = fig.colorbar(pontos, ax=ax, orientation="horizontal", shrink=0.6, pad=0.02, aspect=30)
+    barra.set_ticks([0.05, 0.95], labels=["menor risco", "maior risco"])
+    barra.ax.tick_params(labelsize=11, length=0)
+    barra.outline.set_visible(False)
+    return _salvar_mapa(fig, "apr_mapa_risco.png")
+
+
+def mapa_grupos():
+    grupos = pd.read_csv(DIR_REPORTS / "clusters_municipios.csv", dtype={"id_municipio": str})
+    dados = grupos.merge(_coordenadas(), on="id_municipio")
+    fig, ax = plt.subplots(figsize=(6, 6.2))
+    for grupo, cor in CORES_GRUPO.items():
+        parte = dados[dados["grupo"] == grupo]
+        ax.scatter(parte["longitude"], parte["latitude"], s=5, color=cor, linewidths=0, label=grupo)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, 0.0), ncol=2, fontsize=9, markerscale=3, frameon=False)
+    return _salvar_mapa(fig, "apr_mapa_grupos.png")
 
 
 def numero_destaque(slide, x, y, w, valor, legenda, cor=CORAL, tamanho=44, cor_legenda=SUAVE):
@@ -146,41 +242,116 @@ def numero_destaque(slide, x, y, w, valor, legenda, cor=CORAL, tamanho=44, cor_l
     texto(slide, x, y + Inches(0.82), w, Inches(0.7), legenda, tamanho=13, cor=cor_legenda)
 
 
-def estilizar_grafico(grafico, tamanho=12):
-    grafico.font.name = CORPO_FONTE
-    grafico.font.size = Pt(tamanho)
-    grafico.font.color.rgb = SUAVE
+def titulo_grafico(grafico, titulo):
+    grafico.has_title = True
+    grafico.chart_title.text_frame.text = titulo
+    fonte = grafico.chart_title.text_frame.paragraphs[0].runs[0].font
+    fonte.name, fonte.size, fonte.bold, fonte.color.rgb = CORPO_FONTE, Pt(14), True, ESCURO
+
+
+def barras(slide, x, y, w, h, categorias, valores, titulo, formato='0"%"', cores=None, minimo=None, maximo=None,
+           tamanho=13):
+    """Barras horizontais nativas, no mesmo estilo em todo o deck. A primeira
+    categoria fica embaixo (convenção do PowerPoint). Aceita valores negativos:
+    o rótulo das categorias fica na borda esquerda para não colidir com as barras."""
+    dados = CategoryChartData()
+    dados.categories = categorias
+    dados.add_series("valor", valores)
+    grafico = slide.shapes.add_chart(XL_CHART_TYPE.BAR_CLUSTERED, x, y, w, h, dados).chart
+    grafico.font.name, grafico.font.size, grafico.font.color.rgb = CORPO_FONTE, Pt(tamanho), SUAVE
+    grafico.has_legend = False
+    titulo_grafico(grafico, titulo)
+    grafico.value_axis.visible = False
+    grafico.value_axis.has_major_gridlines = False
+    if minimo is not None:
+        grafico.value_axis.minimum_scale = minimo
+    if maximo is not None:
+        grafico.value_axis.maximum_scale = maximo
+    eixo_categorias = grafico.category_axis
+    eixo_categorias.format.line.fill.background()
+    eixo_categorias.tick_label_position = XL_TICK_LABEL_POSITION.LOW
+    eixo_categorias.major_tick_mark = XL_TICK_MARK.NONE
+    plot = grafico.plots[0]
+    plot.gap_width = 45
+    serie = plot.series[0]
+    serie.invert_if_negative = False
+    for ponto, cor in zip(serie.points, cores or [ESCURO] * len(valores)):
+        ponto.format.fill.solid()
+        ponto.format.fill.fore_color.rgb = cor
+    # Cada barra colorida vira um <c:dPt>, que por padrão inverte a cor quando o
+    # valor é negativo (a barra fica branca). Desliga isso ponto a ponto.
+    for dpt in serie._element.findall(qn("c:dPt")):
+        inverter = dpt.makeelement(qn("c:invertIfNegative"), {"val": "0"})
+        dpt.find(qn("c:idx")).addnext(inverter)
+    # Mostra o rótulo de todas as categorias (sem isso o PowerPoint pula alguns em listas longas)
+    eixo_categorias._element.append(eixo_categorias._element.makeelement(qn("c:tickLblSkip"), {"val": "1"}))
+    rotulos = serie.data_labels
+    rotulos.show_value = True
+    rotulos.number_format = formato
+    rotulos.number_format_is_linked = False
+    rotulos.position = XL_LABEL_POSITION.OUTSIDE_END
+    rotulos.font.size, rotulos.font.bold, rotulos.font.color.rgb = Pt(tamanho), True, TEXTO
+    return grafico
+
+
+def tabela(slide, x, y, w, cabecalhos, linhas, larguras, alinhamentos, altura_linha=Inches(0.42)):
+    forma = slide.shapes.add_table(len(linhas) + 1, len(cabecalhos), x, y, w, altura_linha * (len(linhas) + 1))
+    forma.table.first_row = True
+    for j, largura in enumerate(larguras):
+        forma.table.columns[j].width = largura
+    for i, linha in enumerate([cabecalhos, *linhas]):
+        forma.table.rows[i].height = altura_linha
+        for j, valor in enumerate(linha):
+            celula = forma.table.cell(i, j)
+            celula.fill.solid()
+            celula.fill.fore_color.rgb = ESCURO if i == 0 else (CARTAO if i % 2 else BRANCO)
+            celula.margin_left = celula.margin_right = Inches(0.1)
+            celula.vertical_anchor = MSO_ANCHOR.MIDDLE
+            p = celula.text_frame.paragraphs[0]
+            p.alignment = alinhamentos[j]
+            run = p.add_run()
+            run.text = str(valor)
+            run.font.name = CORPO_FONTE
+            run.font.size = Pt(13 if i else 12)
+            run.font.bold = i == 0
+            run.font.color.rgb = BRANCO if i == 0 else TEXTO
+    return forma
 
 
 def notas(slide, fala):
     slide.notes_slide.notes_text_frame.text = fala
 
 
+def pct(valor):
+    return f"{valor:.0f}%".replace(".", ",")
+
+
 # ---------------------------------------------------------------------------
-# Slides
+# Abertura
 # ---------------------------------------------------------------------------
 
 def slide_capa(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
+    s = novo_slide(prs)
     fundo(s, ESCURO)
     texto(s, MARGEM, Inches(1.3), Inches(7.6), Inches(0.4), "TECH CHALLENGE · FASE 3", tamanho=14, cor=CORAL, negrito=True)
-    texto(s, MARGEM, Inches(1.85), Inches(7.6), Inches(2.4), "Alfabetização no Brasil: onde agir e com qual alavanca",
-          tamanho=40, cor=BRANCO, negrito=True, fonte=TITULO_FONTE)
-    texto(s, MARGEM, Inches(4.35), Inches(7.2), Inches(1.0),
+    texto(s, MARGEM, Inches(1.85), Inches(7.9), Inches(2.4), "Alfabetização no Brasil: cinco perguntas para decidir onde agir",
+          tamanho=36, cor=BRANCO, negrito=True, fonte=TITULO_FONTE)
+    texto(s, MARGEM, Inches(3.55), Inches(7.2), Inches(1.0),
           "Predição e inteligência analítica a partir do Indicador Criança Alfabetizada", tamanho=18, cor=CLARO)
-    texto(s, MARGEM, Inches(6.35), Inches(7.2), Inches(0.4), "Reunião executiva com gestores públicos de educação",
+    texto(s, MARGEM, Inches(5.75), Inches(7.6), Inches(0.4), AUTOR, tamanho=18, cor=BRANCO, negrito=True)
+    texto(s, MARGEM, Inches(6.2), Inches(7.6), Inches(0.4), "Reunião executiva com gestores públicos de educação",
           tamanho=13, cor=CLARO)
-    cartao(s, Inches(8.9), Inches(1.6), Inches(3.8), Inches(4.2), cor=RGBColor(0x2F, 0x56, 0x65))
+    cartao(s, Inches(8.9), Inches(1.6), Inches(3.8), Inches(4.2), cor=ESCURO_CARTAO)
     texto(s, Inches(9.3), Inches(2.1), Inches(3.1), Inches(1.4), "80%", tamanho=80, cor=CORAL, negrito=True,
           fonte=TITULO_FONTE)
     texto(s, Inches(9.3), Inches(3.7), Inches(3.1), Inches(1.6),
           "das crianças alfabetizadas ao fim do 2º ano até 2030: a meta nacional", tamanho=16, cor=BRANCO)
-    notas(s, "Bom dia a todos. Vou apresentar o que os dados de alfabetização nos dizem sobre onde agir "
-             "e com qual alavanca para chegar à meta de 80% de crianças alfabetizadas até 2030.")
+    notas(s, "Bom dia a todos. Vou responder cinco perguntas que ajudam a decidir onde agir para chegar a 80% "
+             "de crianças alfabetizadas até 2030.")
 
 
 def slide_agenda(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
+    s = novo_slide(prs)
     cabecalho(s, "Avançamos, mas ainda faltam 14 pontos até a meta", "ONDE ESTAMOS E O QUE VAMOS RESPONDER")
     for i, (valor, legenda, cor) in enumerate([
         ("55,9%", "crianças alfabetizadas em 2023", SUAVE),
@@ -202,25 +373,20 @@ def slide_agenda(prs):
         y = Inches(2.85) + i * Inches(0.78)
         circulo(s, Inches(5.7), y, Inches(0.5), str(i + 1), tamanho=16)
         texto(s, Inches(6.4), y, Inches(5.9), Inches(0.5), pergunta, tamanho=16, ancora=MSO_ANCHOR.MIDDLE)
-    notas(s, "O Brasil avançou: de 56% em 2023 para 66% em 2025, acima da meta do ano. "
-             "Mas ainda faltam 14 pontos até 2030, e a média esconde o essencial. "
-             "Trouxemos respostas para cinco perguntas de negócio.")
+    notas(s, "O Brasil avançou de 56% em 2023 para 66% em 2025, mas ainda faltam 14 pontos até 2030. "
+             "Estas são as cinco perguntas que vamos responder com dados.")
 
 
 def slide_problema(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
+    s = novo_slide(prs)
     cabecalho(s, "A média esconde quase 50 pontos de diferença entre estados", "O PROBLEMA")
     dados = CategoryChartData()
     dados.categories = ["2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"]
     dados.add_series("Resultado", (55.9, 59.2, 66.0, None, None, None, None, None))
     dados.add_series("Meta nacional", (None, 59.9, 63.8, 67.5, 71.0, 74.2, 77.2, 80.0))
     grafico = s.shapes.add_chart(XL_CHART_TYPE.LINE_MARKERS, MARGEM, Inches(1.95), Inches(6.4), Inches(4.6), dados).chart
-    estilizar_grafico(grafico)
-    grafico.has_title = True
-    grafico.chart_title.text_frame.text = "Brasil: % de crianças alfabetizadas x meta"
-    grafico.chart_title.text_frame.paragraphs[0].runs[0].font.size = Pt(14)
-    grafico.chart_title.text_frame.paragraphs[0].runs[0].font.bold = True
-    grafico.chart_title.text_frame.paragraphs[0].runs[0].font.color.rgb = ESCURO
+    grafico.font.name, grafico.font.size, grafico.font.color.rgb = CORPO_FONTE, Pt(12), SUAVE
+    titulo_grafico(grafico, "Brasil: % de crianças alfabetizadas x meta")
     grafico.has_legend = True
     grafico.legend.position = XL_LEGEND_POSITION.BOTTOM
     grafico.legend.include_in_layout = False
@@ -235,28 +401,26 @@ def slide_problema(prs):
         serie.marker.format.fill.fore_color.rgb = cor
         serie.marker.format.line.color.rgb = cor
         serie.smooth = False
-    resultado = grafico.series[0]
-    resultado.data_labels.show_value = True
-    resultado.data_labels.number_format = '0.0"%"'
-    resultado.data_labels.number_format_is_linked = False
-    resultado.data_labels.position = XL_LABEL_POSITION.ABOVE
-    resultado.data_labels.font.size = Pt(12)
-    resultado.data_labels.font.bold = True
-    resultado.data_labels.font.color.rgb = CORAL
-    imagem(s, DIR_IMAGENS / "eda_02_taxa_por_uf.png", Inches(7.3), Inches(1.85), Inches(5.4), Inches(5.3))
-    notas(s, "A diferença entre estados chega a quase 50 pontos: 36% na Bahia e 85% no Ceará em 2024. "
-             "A pergunta que trouxemos é onde agir, e com qual alavanca.")
+    rotulos = grafico.series[0].data_labels
+    rotulos.show_value = True
+    rotulos.number_format = '0.0"%"'
+    rotulos.number_format_is_linked = False
+    rotulos.position = XL_LABEL_POSITION.ABOVE
+    rotulos.font.size, rotulos.font.bold, rotulos.font.color.rgb = Pt(12), True, CORAL
+    imagem(s, DIR_IMAGENS / "eda_02_taxa_por_uf.png", Inches(7.3), Inches(1.85), Inches(5.4), Inches(5.2),
+           "Barras com o percentual de crianças alfabetizadas por estado em 2024, de 36% na Bahia a 85% no Ceará")
+    notas(s, "A média esconde a desigualdade: em 2024, 36% das crianças alfabetizadas na Bahia e 85% no Ceará.")
 
 
 def slide_metodo(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
+    s = novo_slide(prs)
     cabecalho(s, "Dados públicos, dois modelos e validação contra a realidade", "COMO CHEGAMOS ÀS RESPOSTAS")
     blocos = [
         ("1", "Dados", ["3,35 milhões de crianças avaliadas em 2023 e 2024",
                         "Censo Escolar, fluxo escolar, nível socioeconômico (INSE), PIB e IDHM",
                         "Contexto de 5,5 mil municípios e suas redes"],
          "5 fontes", "públicas integradas"),
-        ("2", "Modelos", ["Risco de cada criança não se alfabetizar (LightGBM)",
+        ("2", "Modelos", ["Risco de cada criança não se alfabetizar",
                           "Chance de cada rede municipal bater a meta do ano seguinte",
                           "Grupos de municípios com contexto parecido"],
          "66%", "do sinal possível capturado pelo modelo"),
@@ -276,73 +440,109 @@ def slide_metodo(prs):
         texto(s, x + Inches(0.35), Inches(5.45), largura - Inches(0.7), Inches(0.6), destaque, tamanho=28, cor=CORAL,
               negrito=True, fonte=TITULO_FONTE)
         texto(s, x + Inches(0.35), Inches(6.1), largura - Inches(0.7), Inches(0.5), legenda, tamanho=13, cor=SUAVE)
-    notas(s, "Usamos os microdados de 3,3 milhões de crianças e cruzamos com Censo Escolar, fluxo escolar, "
-             "nível socioeconômico, PIB e IDHM. Construímos dois modelos: um estima o risco de cada criança "
-             "e outro antecipa quais redes não devem bater a meta. Tudo foi validado com dados que o modelo nunca viu.")
+    notas(s, "Cruzamos os dados de 3,3 milhões de crianças com cinco bases públicas e construímos dois modelos: "
+             "o risco de cada criança e a chance de cada rede bater a meta. Testamos com dados que o modelo nunca viu.")
 
 
-def slide_fatores(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
-    cabecalho(s, "Trajetória escolar e política estadual pesam mais que a renda",
-              "QUAIS FATORES MAIS IMPACTAM A ALFABETIZAÇÃO?", numero=1)
+# ---------------------------------------------------------------------------
+# Pergunta 1 - fatores
+# ---------------------------------------------------------------------------
+
+def slide_p1_resposta(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 1, "Quais fatores mais impactam a alfabetização?",
+                       resposta="trajetória escolar e política estadual pesam mais que a renda")
     temas = [("Docentes e equipe", 3.7), ("Infraestrutura escolar", 4.8), ("Ruralidade e diversidade", 5.9),
              ("Porte da rede e do município", 6.0), ("Nível socioeconômico", 19.0), ("Estado (UF) e região", 29.5),
              ("Trajetória escolar", 30.8)]
-    dados = CategoryChartData()
-    dados.categories = [t for t, _ in temas]
-    dados.add_series("% da importância", [v for _, v in temas])
-    grafico = s.shapes.add_chart(XL_CHART_TYPE.BAR_CLUSTERED, MARGEM, Inches(1.95), Inches(7.2), Inches(4.9), dados).chart
-    estilizar_grafico(grafico, 13)
-    grafico.has_legend = False
-    grafico.has_title = True
-    grafico.chart_title.text_frame.text = "Peso de cada tema na previsão (SHAP agregado, % do total)"
-    rotulo = grafico.chart_title.text_frame.paragraphs[0].runs[0].font
-    rotulo.size, rotulo.bold, rotulo.color.rgb = Pt(14), True, ESCURO
-    grafico.value_axis.visible = False
-    grafico.value_axis.has_major_gridlines = False
-    grafico.category_axis.format.line.fill.background()
-    plot = grafico.plots[0]
-    plot.gap_width = 45
-    plot.vary_by_categories = False
-    serie = plot.series[0]
-    serie.format.fill.solid()
-    serie.format.fill.fore_color.rgb = ESCURO
-    for i in (5, 6):
-        ponto = serie.points[i]
-        ponto.format.fill.solid()
-        ponto.format.fill.fore_color.rgb = CORAL
-    serie.data_labels.show_value = True
-    serie.data_labels.number_format = '0"%"'
-    serie.data_labels.number_format_is_linked = False
-    serie.data_labels.position = XL_LABEL_POSITION.OUTSIDE_END
-    serie.data_labels.font.size = Pt(13)
-    serie.data_labels.font.bold = True
-    serie.data_labels.font.color.rgb = TEXTO
-
-    cartao(s, Inches(8.2), Inches(1.95), Inches(4.5), Inches(4.9))
-    texto(s, Inches(8.55), Inches(2.25), Inches(3.8), Inches(0.4), "Resposta", tamanho=18, cor=CORAL, negrito=True)
-    lista(s, Inches(8.55), Inches(2.8), Inches(3.85), Inches(3.9), [
+    barras(s, MARGEM, TOPO_PERGUNTA, Inches(7.2), Inches(4.5), [t for t, _ in temas], [v for _, v in temas],
+           "Peso de cada tema na previsão do modelo (% do total)", cores=[ESCURO] * 5 + [CORAL] * 2)
+    cartao(s, Inches(8.2), TOPO_PERGUNTA + Inches(0.4), Inches(4.5), Inches(3.45))
+    lista(s, Inches(8.55), TOPO_PERGUNTA + Inches(0.75), Inches(3.85), Inches(2.9), [
         [("Trajetória escolar (31%): ", {"negrito": True}), ("redes com atraso e abandono nos anos iniciais alfabetizam menos", {})],
         [("Política estadual (30%): ", {"negrito": True}), ("o estado pesa tanto quanto o contexto", {})],
         [("Nível socioeconômico (19%): ", {"negrito": True}), ("importa, mas vem só em 3º lugar", {})],
-        "Infraestrutura e formação docente têm peso menor depois desses fatores",
+        "Infraestrutura e formação docente pesam menos depois desses fatores",
     ], tamanho=15)
-    notas(s, "O que mais pesa? Em primeiro lugar, a trajetória escolar: redes onde as crianças atrasam ou "
-             "abandonam nos anos iniciais. Em segundo, o estado, ou seja, a política estadual. "
+    notas(s, "Primeira pergunta: o que mais pesa? A trajetória escolar, com 31%, e a política estadual, com 30%. "
              "O nível socioeconômico vem só em terceiro. As duas alavancas mais fortes estão ao alcance da gestão.")
 
 
-def slide_variaveis(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
-    cabecalho(s, "O Ceará entrega muito mais do que seu contexto prevê",
-              "QUAIS VARIÁVEIS POSSUEM MAIOR INFLUÊNCIA NOS MODELOS?", numero=2)
-    imagem(s, DIR_IMAGENS / "int_05_efeito_uf.png", MARGEM, Inches(1.85), Inches(5.6), Inches(5.35))
-    texto(s, Inches(6.65), Inches(2.0), Inches(6.0), Inches(0.4), "Variáveis mais influentes (SHAP e permutação)",
+def slide_p1_exemplo(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 1, "", evidencia="Contexto não é destino: um município cearense")
+    numero_destaque(s, MARGEM, Inches(2.0), Inches(2.6), "76%", "das crianças do município em situação de pobreza",
+                    cor=SUAVE, tamanho=54)
+    numero_destaque(s, Inches(3.4), Inches(2.0), Inches(2.6), "95%", "de chance prevista de alfabetização",
+                    cor=TEAL, tamanho=54)
+    cartao(s, MARGEM, Inches(4.0), Inches(5.4), Inches(2.2))
+    texto(s, Inches(0.95), Inches(4.2), Inches(4.8), Inches(0.4), "O que a rede faz diferente", tamanho=16,
+          cor=ESCURO, negrito=True)
+    lista(s, Inches(0.95), Inches(4.7), Inches(4.8), Inches(1.4), [
+        "Abandono zero e 100% de aprovação no 2º ano",
+        "Distorção idade-série de apenas 1,9%",
+        "78% das matrículas em tempo integral",
+    ], tamanho=15, espaco_depois=4)
+    # Contribuições da explicação local (notebook 03, seção 7), em escala relativa: Ceará = 100.
+    # "Demais fatores" soma o restante, inclusive variáveis socioeconômicas correlacionadas.
+    fatores = [("Nível socioeconômico (INSE 4,4)", -5), ("Demais fatores", 28), ("Aprovação de 100% no 2º ano", 5),
+               ("Jornada de 7 horas/dia", 5), ("78% em tempo integral", 7), ("Abandono zero", 22),
+               ("Distorção idade-série de 1,9%", 28), ("Estar no Ceará", 100)]
+    barras(s, Inches(6.3), Inches(1.95), Inches(6.4), Inches(4.4), [f for f, _ in fatores], [v for _, v in fatores],
+           "O que explica os 95% (peso relativo, Ceará = 100)", formato="+0;-0", minimo=-15, maximo=125,
+           cores=[CORAL] + [SUAVE] + [TEAL] * 6, tamanho=12)
+    texto(s, Inches(6.3), Inches(6.45), Inches(6.4), Inches(0.5),
+          "É a rede de menor risco previsto entre 20 mil alunos analisados: o caso extremo, usado como ilustração.",
+          tamanho=12, cor=SUAVE, italico=True)
+    notas(s, "Um exemplo, o caso mais extremo: um município cearense com 76% das crianças na pobreza tem 95% de "
+             "chance prevista, porque a rede tem abandono zero, quase nenhuma distorção e tempo integral.")
+
+
+# ---------------------------------------------------------------------------
+# Pergunta 2 - variáveis
+# ---------------------------------------------------------------------------
+
+def slide_p2_resposta(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 2, "Quais variáveis possuem maior influência nos modelos?",
+                       resposta="estado, distorção idade-série, abandono e nível socioeconômico")
+    # |SHAP| médio por variável no teste 2024 (notebook 03, seção 2), one-hot somado
+    variaveis = [("Tamanho médio das escolas", 0.022), ("População rural (2010)", 0.032),
+                 ("% alunos com INSE baixo", 0.033), ("Região", 0.044), ("INSE médio da rede", 0.071),
+                 ("Abandono nos anos iniciais", 0.112), ("Distorção idade-série", 0.127), ("Estado (UF)", 0.348)]
+    barras(s, MARGEM, TOPO_PERGUNTA, Inches(7.4), Inches(4.5), [v for v, _ in variaveis],
+           [round(x / 0.348 * 100) for _, x in variaveis],
+           "Influência de cada variável na previsão (estado = 100)", formato="0",
+           cores=[ESCURO] * 4 + [TEAL] + [CORAL] * 3, maximo=120)
+    cartao(s, Inches(8.4), TOPO_PERGUNTA + Inches(0.4), Inches(4.3), Inches(3.45))
+    texto(s, Inches(8.75), TOPO_PERGUNTA + Inches(0.7), Inches(3.7), Inches(0.4), "Dois testes, o mesmo ranking",
           tamanho=16, cor=ESCURO, negrito=True)
+    lista(s, Inches(8.75), TOPO_PERGUNTA + Inches(1.25), Inches(3.65), Inches(2.5), [
+        [("Leitura da previsão: ", {"negrito": True}), ("quanto cada variável empurra a chance de cada criança", {})],
+        [("Teste de retirada: ", {"negrito": True}), ("sem o estado, o modelo perde mais acerto do que sem qualquer outra variável", {})],
+        "Variáveis parecidas (IDHM, renda, pobreza) dividem a influência; por isso a leitura por tema",
+    ], tamanho=14)
+    notas(s, "Segunda pergunta: as variáveis mais influentes são o estado, a distorção idade-série, o abandono e "
+             "o nível socioeconômico. Dois testes diferentes chegam ao mesmo ranking.")
+
+
+def slide_p2_evidencia(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 2, "", evidencia="O efeito do estado e os limiares que mudam a chance")
+    # Efeito médio da UF na previsão (notebook 03, seção 4), em escala relativa: Ceará = 100
+    efeito = [("SE", -65), ("RN", -48), ("TO", -46), ("BA", -38), ("SC", -23), ("AL", -22), ("MT", -18), ("MS", -17),
+              ("MG", -12), ("SP", -8), ("DF", -7), ("AP", -7), ("RS", -6), ("PB", -6), ("RJ", -5), ("PI", -4),
+              ("AM", -3), ("AC", -3), ("PA", -3), ("RO", 8), ("MA", 10), ("PE", 10), ("PR", 16), ("ES", 20),
+              ("GO", 21), ("CE", 100)]
+    barras(s, MARGEM, Inches(1.95), Inches(5.6), Inches(5.0), [uf for uf, _ in efeito], [v for _, v in efeito],
+           "Efeito do estado além do contexto (Ceará = 100)", formato="+0;-0", minimo=-80, maximo=120,
+           cores=[CORAL if v < 0 else TEAL for _, v in efeito], tamanho=10)
+    texto(s, Inches(6.65), Inches(2.0), Inches(6.0), Inches(0.4), "Descontado o contexto", tamanho=16,
+          cor=ESCURO, negrito=True)
     lista(s, Inches(6.65), Inches(2.5), Inches(6.0), Inches(1.8), [
-        "Estado (UF), com destaque para o Ceará",
-        "Distorção idade-série e abandono nos anos iniciais",
-        "Nível socioeconômico dos alunos (INSE)",
+        "O Ceará alfabetiza muito acima do que sua renda prevê",
+        "GO, ES, PR e PE também entregam mais que o esperado",
+        "SE, RN, TO e BA entregam menos do que poderiam",
     ], tamanho=15, espaco_depois=4)
     texto(s, Inches(6.65), Inches(4.15), Inches(6.0), Inches(0.4), "Os efeitos funcionam por limiares", tamanho=16,
           cor=ESCURO, negrito=True)
@@ -354,139 +554,164 @@ def slide_variaveis(prs):
         texto(s, x + Inches(0.2), Inches(4.8), Inches(1.6), Inches(0.7), valor, tamanho=30, cor=CORAL, negrito=True,
               fonte=TITULO_FONTE)
         texto(s, x + Inches(0.2), Inches(5.55), Inches(1.55), Inches(1.1), legenda, tamanho=13, cor=TEXTO)
-    notas(s, "Descontado o contexto, o Ceará alfabetiza muito acima do que sua renda faria esperar, efeito "
-             "associado a quase 20 anos de regime de colaboração com os municípios. Sergipe, Rio Grande do Norte, "
-             "Tocantins e Bahia entregam menos do que poderiam. E os efeitos têm limiares: acima de 8% de distorção "
-             "ou de meio por cento de abandono, a chance cai.")
+    notas(s, "Descontado o contexto, o Ceará entrega muito mais do que sua renda prevê. E há limiares: acima de "
+             "8% de distorção ou de meio por cento de abandono, a chance cai.")
 
 
-def slide_exemplo(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
-    cabecalho(s, "Contexto não é destino: um município cearense", "EXEMPLO DE EXPLICAÇÃO INDIVIDUAL")
-    numero_destaque(s, MARGEM, Inches(2.0), Inches(2.6), "76%", "das crianças do município em situação de pobreza",
-                    cor=SUAVE, tamanho=54)
-    numero_destaque(s, Inches(3.4), Inches(2.0), Inches(2.6), "95%", "de chance prevista de alfabetização",
-                    cor=TEAL, tamanho=54)
-    cartao(s, MARGEM, Inches(4.0), Inches(5.4), Inches(2.2))
-    texto(s, Inches(0.95), Inches(4.2), Inches(4.8), Inches(0.4), "O que a rede faz diferente", tamanho=16,
-          cor=ESCURO, negrito=True)
-    lista(s, Inches(0.95), Inches(4.7), Inches(4.8), Inches(2.0), [
-        "Abandono zero e 100% de aprovação no 2º ano",
-        "Distorção idade-série de apenas 1,9%",
-        "78% das matrículas em tempo integral",
-    ], tamanho=15, espaco_depois=4)
-    imagem(s, DIR_IMAGENS / "int_09_local_menor_risco.png", Inches(6.3), Inches(1.9), Inches(6.45), Inches(5.0))
-    notas(s, "Um exemplo: um município cearense com 76% das crianças na pobreza tem previsão de 95% de "
-             "alfabetização. A rede tem abandono zero, quase nenhuma distorção idade-série e tempo integral. "
-             "O contexto importa, mas não decide sozinho.")
+# ---------------------------------------------------------------------------
+# Pergunta 3 - regiões semelhantes
+# ---------------------------------------------------------------------------
 
-
-def slide_grupos(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
-    cabecalho(s, "Mesma pobreza, 21 pontos de diferença na alfabetização",
-              "QUAIS REGIÕES POSSUEM PADRÕES SEMELHANTES?", numero=3)
-    mapa = DIR_IMAGENS / "_mapa_grupos.png"
-    Image.open(DIR_IMAGENS / "app_05_clusters.png").crop((0, 0, 930, 950)).save(mapa)
-    imagem(s, mapa, MARGEM, Inches(1.85), Inches(5.3), Inches(5.3))
+def slide_p3_resposta(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 3, "Quais regiões possuem padrões semelhantes?",
+                       resposta="cinco perfis; com a mesma pobreza, 21 pontos de diferença")
+    imagem(s, mapa_grupos(), MARGEM, TOPO_PERGUNTA - Inches(0.1), Inches(4.9), Inches(4.6),
+           "Mapa do Brasil com cada município colorido pelo seu grupo de contexto")
     grupos = [("Fluxo escolar crítico", 41.9), ("Áreas diferenciadas e rurais", 50.0), ("Urbano de maior porte", 59.3),
               ("Vulnerável com fluxo regular", 62.9), ("Pequenos desenvolvidos", 70.5)]
-    dados = CategoryChartData()
-    dados.categories = [g for g, _ in grupos]
-    dados.add_series("Taxa 2024", [v for _, v in grupos])
-    grafico = s.shapes.add_chart(XL_CHART_TYPE.BAR_CLUSTERED, Inches(6.2), Inches(1.95), Inches(6.5), Inches(3.0),
-                                 dados).chart
-    estilizar_grafico(grafico, 12)
-    grafico.has_legend = False
-    grafico.has_title = True
-    grafico.chart_title.text_frame.text = "% de alfabetizados por grupo de contexto (2024)"
-    rotulo = grafico.chart_title.text_frame.paragraphs[0].runs[0].font
-    rotulo.size, rotulo.bold, rotulo.color.rgb = Pt(14), True, ESCURO
-    grafico.value_axis.visible = False
-    grafico.value_axis.has_major_gridlines = False
-    grafico.value_axis.maximum_scale = 85
-    grafico.category_axis.format.line.fill.background()
-    plot = grafico.plots[0]
-    plot.gap_width = 40
-    serie = plot.series[0]
-    for ponto, cor in zip(serie.points, [CORAL, LARANJA, AMARELO, TEAL, ESCURO]):
-        ponto.format.fill.solid()
-        ponto.format.fill.fore_color.rgb = cor
-    serie.data_labels.show_value = True
-    serie.data_labels.number_format = '0"%"'
-    serie.data_labels.number_format_is_linked = False
-    serie.data_labels.position = XL_LABEL_POSITION.OUTSIDE_END
-    serie.data_labels.font.size = Pt(13)
-    serie.data_labels.font.bold = True
-    serie.data_labels.font.color.rgb = TEXTO
-    cartao(s, Inches(6.2), Inches(5.15), Inches(6.5), Inches(1.45))
-    texto(s, Inches(6.5), Inches(5.3), Inches(5.9), Inches(1.2), [
-        [("Os dois grupos vulneráveis têm ~56% de pobreza infantil e o mesmo INSE. ", {"negrito": True}),
-         ("O que separa 63% de 42% é o fluxo escolar: distorção de 6% contra 16%. "
-          "Em todos os grupos há municípios-referência, 30 a 50 pontos acima do esperado.", {})],
+    barras(s, Inches(5.9), TOPO_PERGUNTA, Inches(6.8), Inches(2.9), [g for g, _ in grupos], [v for _, v in grupos],
+           "% de alfabetizados por grupo de contexto (2024)", cores=[CORAL, LARANJA, AMARELO, TEAL, ESCURO], maximo=85)
+    cartao(s, Inches(5.9), Inches(5.45), Inches(6.8), Inches(1.25))
+    texto(s, Inches(6.2), Inches(5.6), Inches(6.2), Inches(1.0), [
+        [("Mesma pobreza infantil (~56%) e mesmo INSE: ", {"negrito": True}),
+         ("o grupo com fluxo regular alfabetiza 63%; o com fluxo crítico, 42%. "
+          "A diferença está na distorção idade-série: 6% contra 16%.", {})],
     ], tamanho=14)
-    notas(s, "Agrupamos os municípios por contexto. Os dois grupos vulneráveis têm a mesma pobreza e o mesmo "
-             "nível socioeconômico, mas um alfabetiza 63% e o outro 42%. São 21 pontos, explicados pelo fluxo "
-             "escolar. E em todo grupo há municípios-referência, como Barreirinhas, no Maranhão.")
+    notas(s, "Terceira pergunta: agrupamos os municípios em cinco perfis de contexto. Dois grupos têm a mesma "
+             "pobreza, mas um alfabetiza 63% e o outro 42%. A diferença de 21 pontos está no fluxo escolar.")
 
 
-def slide_risco(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
-    cabecalho(s, "Gravidade concentrada na Bahia, volume nas grandes capitais",
-              "QUAIS MUNICÍPIOS APRESENTAM MAIOR RISCO EDUCACIONAL?", numero=4)
-    imagem(s, DIR_IMAGENS / "app_03_mapa_risco.png", MARGEM, Inches(1.85), Inches(5.0), Inches(5.3))
-    cartao(s, Inches(5.95), Inches(1.95), Inches(3.25), Inches(4.85))
-    texto(s, Inches(6.25), Inches(2.2), Inches(2.7), Inches(0.4), "Por gravidade", tamanho=18, cor=CORAL, negrito=True)
-    texto(s, Inches(6.25), Inches(2.65), Inches(2.75), Inches(0.6), "% das redes no decil de maior risco", tamanho=12,
-          cor=SUAVE)
-    for i, (uf, valor) in enumerate([("Bahia", "84%"), ("Sergipe", "43%"), ("Amazonas", "31%"),
-                                     ("Rio Grande do Norte", "30%"), ("Pará", "29%")]):
-        y = Inches(3.2) + i * Inches(0.66)
-        texto(s, Inches(6.25), y, Inches(2.0), Inches(0.5), uf, tamanho=15, ancora=MSO_ANCHOR.MIDDLE)
-        texto(s, Inches(8.1), y, Inches(0.9), Inches(0.5), valor, tamanho=17, cor=ESCURO, negrito=True,
-              alinhamento=PP_ALIGN.RIGHT, ancora=MSO_ANCHOR.MIDDLE)
-    cartao(s, Inches(9.45), Inches(1.95), Inches(3.25), Inches(4.85))
-    texto(s, Inches(9.75), Inches(2.2), Inches(2.7), Inches(0.4), "Por volume", tamanho=18, cor=CORAL, negrito=True)
-    texto(s, Inches(9.75), Inches(2.65), Inches(2.75), Inches(0.6), "crianças não alfabetizadas (rede municipal)",
-          tamanho=12, cor=SUAVE)
-    for i, (cidade, valor) in enumerate([("São Paulo", "21,6 mil"), ("Rio de Janeiro", "15,7 mil"),
-                                         ("Manaus", "9,3 mil"), ("Salvador", "7,7 mil")]):
-        y = Inches(3.2) + i * Inches(0.66)
-        texto(s, Inches(9.75), y, Inches(1.5), Inches(0.5), cidade, tamanho=15, ancora=MSO_ANCHOR.MIDDLE)
-        texto(s, Inches(11.2), y, Inches(1.2), Inches(0.5), valor, tamanho=17, cor=ESCURO, negrito=True,
-              alinhamento=PP_ALIGN.RIGHT, ancora=MSO_ANCHOR.MIDDLE)
-    texto(s, Inches(9.75), Inches(5.95), Inches(2.75), Inches(0.75),
+def slide_p3_referencias(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 3, "", evidencia="Em todo perfil há municípios que superam o esperado")
+    # Desvio positivo (notebook 04, seção 3): redes com 50+ alunos e participação de 80%+ na prova
+    referencias = [
+        ("Fluxo escolar crítico", "Tartarugalzinho", "AP", 94.2, 43.7),
+        ("Fluxo escolar crítico", "Itaueira", "PI", 85.9, 43.7),
+        ("Vulnerável com fluxo regular", "Jequiá da Praia", "AL", 95.7, 51.2),
+        ("Vulnerável com fluxo regular", "Taperoá", "PB", 90.6, 47.6),
+        ("Áreas diferenciadas e rurais", "Barreirinhas", "MA", 78.5, 46.6),
+        ("Áreas diferenciadas e rurais", "Atalaia do Norte", "AM", 84.1, 49.3),
+        ("Urbano de maior porte", "Corinto", "MG", 85.8, 53.3),
+        ("Pequenos desenvolvidos", "Carlinda", "MT", 99.0, 60.9),
+    ]
+    linhas = [(g, m, uf, pct(real), pct(esperado), f"+{real - esperado:.0f} p.p.")
+              for g, m, uf, real, esperado in referencias]
+    tabela(s, MARGEM, Inches(2.0), Inches(8.3),
+           ["Grupo de contexto", "Município", "UF", "Real", "Esperado", "Acima"], linhas,
+           [Inches(2.75), Inches(1.85), Inches(0.6), Inches(0.9), Inches(1.1), Inches(1.1)],
+           [PP_ALIGN.LEFT, PP_ALIGN.LEFT, PP_ALIGN.CENTER, PP_ALIGN.RIGHT, PP_ALIGN.RIGHT, PP_ALIGN.RIGHT])
+    cartao(s, Inches(9.3), Inches(2.0), Inches(3.4), Inches(3.2))
+    texto(s, Inches(9.6), Inches(2.25), Inches(2.8), Inches(0.4), "Como usar", tamanho=17, cor=CORAL, negrito=True)
+    lista(s, Inches(9.6), Inches(2.8), Inches(2.85), Inches(2.9), [
+        "Comparar cada rede com seus pares de contexto, não com a média do país",
+        "Estudar e visitar as referências do mesmo grupo",
+        "Validar com as secretarias antes de difundir",
+    ], tamanho=14)
+    texto(s, MARGEM, Inches(6.0), Inches(8.3), Inches(0.6),
+          "Esperado = taxa prevista pelo modelo para o contexto da rede. Redes com 50+ alunos avaliados e "
+          "participação de 80%+ na prova.", tamanho=11, cor=SUAVE, italico=True)
+    notas(s, "E em todo perfil há municípios que alfabetizam 30 a 50 pontos acima do esperado, como Tartarugalzinho, "
+             "no Amapá, e Barreirinhas, no Maranhão. São referências para os pares do mesmo grupo.")
+
+
+# ---------------------------------------------------------------------------
+# Pergunta 4 - risco
+# ---------------------------------------------------------------------------
+
+def slide_p4_resposta(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 4, "Quais municípios apresentam maior risco educacional?",
+                       resposta="gravidade concentrada na Bahia; volume nas grandes capitais")
+    imagem(s, mapa_risco(), MARGEM, TOPO_PERGUNTA - Inches(0.1), Inches(5.0), Inches(4.6),
+           "Mapa do Brasil com o índice de risco de cada rede municipal; o risco alto se concentra na Bahia e no Norte")
+    for coluna, (titulo, subtitulo, itens) in enumerate([
+        ("Por gravidade", "% das redes no decil de maior risco",
+         [("Bahia", "84%"), ("Sergipe", "43%"), ("Amazonas", "31%"), ("Rio Grande do Norte", "30%"), ("Pará", "29%")]),
+        ("Por volume", "crianças não alfabetizadas (rede municipal)",
+         [("São Paulo", "21,6 mil"), ("Rio de Janeiro", "15,7 mil"), ("Manaus", "9,3 mil"), ("Salvador", "7,7 mil")]),
+    ]):
+        x = Inches(5.95) + coluna * Inches(3.5)
+        cartao(s, x, TOPO_PERGUNTA, Inches(3.25), Inches(4.45))
+        texto(s, x + Inches(0.3), TOPO_PERGUNTA + Inches(0.2), Inches(2.7), Inches(0.4), titulo, tamanho=18, cor=CORAL,
+              negrito=True)
+        texto(s, x + Inches(0.3), TOPO_PERGUNTA + Inches(0.62), Inches(2.75), Inches(0.5), subtitulo, tamanho=12,
+              cor=SUAVE)
+        for i, (nome, valor) in enumerate(itens):
+            y = TOPO_PERGUNTA + Inches(1.15) + i * Inches(0.6)
+            texto(s, x + Inches(0.3), y, Inches(2.0), Inches(0.5), nome, tamanho=15, ancora=MSO_ANCHOR.MIDDLE)
+            texto(s, x + Inches(1.75), y, Inches(1.2), Inches(0.5), valor, tamanho=17, cor=ESCURO, negrito=True,
+                  alinhamento=PP_ALIGN.RIGHT, ancora=MSO_ANCHOR.MIDDLE)
+    texto(s, Inches(9.75), TOPO_PERGUNTA + Inches(3.65), Inches(2.75), Inches(0.7),
           "São Paulo alfabetiza 48%; o contexto previa 56%", tamanho=13, cor=TEXTO, italico=True)
-    notas(s, "O índice de risco combina o resultado atual, o contexto e a chance de não bater a meta. "
-             "Por gravidade, 84% das redes municipais da Bahia estão no grupo de maior risco. "
-             "Por volume, só a rede de São Paulo tem 21 mil crianças não alfabetizadas, abaixo do que o "
-             "contexto permitiria, seguida de Rio, Manaus e Salvador.")
+    notas(s, "Quarta pergunta: onde está o risco? Por gravidade, 84% das redes da Bahia estão no grupo de maior "
+             "risco. Por volume, só São Paulo tem 21 mil crianças não alfabetizadas, seguida de Rio, Manaus e Salvador.")
 
 
-def slide_metas(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
-    cabecalho(s, "Prever metas é um alerta para priorizar, não uma sentença",
-              "COMO PREVER MUNICÍPIOS QUE PODEM NÃO ATINGIR METAS FUTURAS?", numero=5)
+def slide_p4_foco(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 4, "", evidencia="Gravidade e volume juntos: 37 redes, 58 mil crianças")
+    ranking = pd.read_csv(DIR_REPORTS / "ranking_risco_municipios_2024.csv")
+    foco = ranking[(ranking["indice_risco"] >= 0.85) & (ranking["alunos_avaliados"] >= 1000)]
+    foco = foco.sort_values("criancas_nao_alfabetizadas", ascending=False)
+    linhas = [
+        (r.nome_municipio, r.sigla_uf, pct(r.taxa_alfabetizacao), pct(r.taxa_esperada_contexto),
+         pct(r.proba_nao_atingir_meta * 100), f"{r.criancas_nao_alfabetizadas / 1000:.1f} mil".replace(".", ","))
+        for r in foco.head(8).itertuples()
+    ]
+    tabela(s, MARGEM, Inches(2.0), Inches(8.3),
+           ["Rede municipal", "UF", "Taxa 2024", "Esperado", "Risco de não bater a meta", "Não alfabetizadas"],
+           linhas, [Inches(2.4), Inches(0.6), Inches(1.05), Inches(1.05), Inches(1.6), Inches(1.6)],
+           [PP_ALIGN.LEFT, PP_ALIGN.CENTER, PP_ALIGN.RIGHT, PP_ALIGN.RIGHT, PP_ALIGN.RIGHT, PP_ALIGN.RIGHT])
+    numero_destaque(s, Inches(9.3), Inches(2.0), Inches(3.4), f"{len(foco)} redes",
+                    "com índice de risco alto (≥ 0,85) e 1.000+ alunos avaliados", cor=CORAL, tamanho=36)
+    numero_destaque(s, Inches(9.3), Inches(3.75), Inches(3.4),
+                    f"{foco['criancas_nao_alfabetizadas'].sum() / 1000:.0f} mil".replace(".", ","),
+                    "crianças não alfabetizadas nessas redes", cor=ESCURO, tamanho=36)
+    cartao(s, Inches(9.3), Inches(5.35), Inches(3.4), Inches(1.15))
+    texto(s, Inches(9.55), Inches(5.5), Inches(2.95), Inches(0.95),
+          "Destaque: a Baixada Fluminense (Nova Iguaçu, Duque de Caxias, São Gonçalo, Belford Roxo)",
+          tamanho=13, cor=TEXTO)
+    notas(s, "Onde gravidade e volume se encontram, há 37 redes grandes e de alto risco, com 58 mil crianças não "
+             "alfabetizadas: Salvador, Maceió e a Baixada Fluminense. É por onde começar.")
+
+
+# ---------------------------------------------------------------------------
+# Pergunta 5 - metas futuras
+# ---------------------------------------------------------------------------
+
+def slide_p5_resposta(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 5, "Como prever municípios que podem não atingir metas futuras?",
+                       resposta="um modelo de transição que vira alerta de prioridade, não sentença")
     passos = [("Aprende", "como as redes de 2023 se saíram frente à meta de 2024"),
               ("Projeta", "a chance de cada rede bater a meta de 2025, com os dados de 2024"),
               ("Protege", "estados com choque atípico, como o RS nas enchentes, não viram tendência")]
     for i, (verbo, descricao) in enumerate(passos):
-        y = Inches(2.0) + i * Inches(1.05)
+        y = TOPO_PERGUNTA + i * Inches(0.95)
         circulo(s, MARGEM, y, Inches(0.55), str(i + 1), cor=ESCURO, tamanho=16)
-        texto(s, MARGEM + Inches(0.75), y - Inches(0.05), Inches(4.6), Inches(1.0),
+        texto(s, MARGEM + Inches(0.75), y - Inches(0.05), Inches(4.6), Inches(0.9),
               [[(verbo + ": ", {"negrito": True, "cor": ESCURO}), (descricao, {})]], tamanho=15)
-    numero_destaque(s, MARGEM, Inches(5.25), Inches(2.6), "54%", "das redes devem bater a meta de 2025", cor=TEAL)
-    numero_destaque(s, Inches(3.3), Inches(5.25), Inches(2.6), "1.431", "redes com menos de 40% de chance", cor=CORAL)
-    imagem(s, DIR_IMAGENS / "app_00_choques_estaduais.png", Inches(6.1), Inches(1.85), Inches(6.6), Inches(5.3))
-    notas(s, "Para as metas, o modelo aprende como as redes se saíram de um ano para o outro e projeta a chance "
-             "de cada uma bater a meta de 2025. Cerca de 1.400 redes têm menos de 40% de chance. "
-             "O Rio Grande do Sul caiu 22 pontos em 2024 por causa das enchentes, e o modelo foi desenhado para "
-             "não projetar esse choque como tendência.")
+    numero_destaque(s, MARGEM, Inches(5.35), Inches(2.6), "54%", "das redes devem bater a meta de 2025", cor=TEAL)
+    numero_destaque(s, Inches(3.3), Inches(5.35), Inches(2.6), "1.431", "redes com menos de 40% de chance", cor=CORAL)
+    # Variação 2023 -> 2024 da rede municipal descontada a nacional (notebook 04, sensibilidade)
+    choques = [("RS", -21.9), ("RO", -5.1), ("PR", -5.0), ("AM", -4.8), ("BA", -3.4), ("PA", -2.3), ("CE", -1.5),
+               ("SC", -0.5), ("PE", -0.3), ("RN", 0.1), ("MA", 0.8), ("RJ", 1.0), ("ES", 1.1), ("PB", 2.8), ("AL", 2.9),
+               ("MT", 3.4), ("GO", 3.7), ("TO", 4.2), ("AP", 4.7), ("PI", 5.0), ("SE", 5.3), ("MS", 6.5), ("MG", 10.3)]
+    barras(s, Inches(6.3), TOPO_PERGUNTA - Inches(0.1), Inches(6.4), Inches(4.65), [uf for uf, _ in choques],
+           [round(v) for _, v in choques], "Variação 2023-2024 acima ou abaixo do Brasil (pontos)", formato="+0;-0;0",
+           minimo=-27, maximo=15, cores=[CORAL if abs(v) > 10 else ESCURO for _, v in choques], tamanho=10)
+    notas(s, "Quinta pergunta: o modelo aprende como as redes se saíram de um ano para o outro e projeta a chance "
+             "de bater a meta de 2025. Cerca de 1.400 redes têm menos de 40%. A queda do Rio Grande do Sul nas "
+             "enchentes, fora da curva, não vira tendência.")
 
 
-def slide_validacao(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
-    cabecalho(s, "Em 2025, o modelo acertou a direção e foi conservador no nível", "VALIDAÇÃO COM O QUE ACONTECEU")
-    imagem(s, DIR_IMAGENS / "eda_12_metas_estaduais.png", MARGEM, Inches(1.85), Inches(5.4), Inches(5.35))
+def slide_p5_validacao(prs):
+    s = novo_slide(prs)
+    cabecalho_pergunta(s, 5, "", evidencia="Em 2025, o modelo acertou a direção e foi conservador no nível")
+    imagem(s, DIR_IMAGENS / "eda_12_metas_estaduais.png", MARGEM, Inches(1.85), Inches(5.4), Inches(5.2),
+           "Resultado de 2024 e de 2025 de cada estado comparado com a meta de 2025; 20 de 26 estados bateram a meta")
     numero_destaque(s, Inches(6.4), Inches(2.0), Inches(3.0), "0,43",
                     "correlação entre a chance prevista e o estado ter batido a meta", cor=TEAL)
     numero_destaque(s, Inches(9.6), Inches(2.0), Inches(3.1), "52% → 76%",
@@ -497,18 +722,20 @@ def slide_validacao(prs):
         [("Nível conservador: ", {"negrito": True}), ("2025 teve um avanço amplo que nenhum dado anterior antecipava", {})],
         [("Bahia: ", {"negrito": True}), ("menor chance prevista e maior salto do país, de 36% para 55%", {})],
     ], tamanho=15)
-    notas(s, "Comparamos a previsão com o que aconteceu em 2025 nos estados. O modelo acertou a direção: "
-             "os estados apontados como mais seguros bateram a meta. Mas foi conservador, porque 2025 teve um "
-             "avanço muito maior que o esperado. A Bahia, a mais crítica, deu o maior salto do país. "
-             "Ela continua entre as menores taxas e precisa de prioridade, e o que mudou lá merece ser estudado.")
+    notas(s, "Conferimos com 2025: o modelo acertou a direção, mas foi conservador, porque 2025 teve um avanço "
+             "amplo. A Bahia deu o maior salto do país e merece ser estudada. O modelo serve para priorizar.")
 
+
+# ---------------------------------------------------------------------------
+# Fechamento
+# ---------------------------------------------------------------------------
 
 def slide_recomendacoes(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
+    s = novo_slide(prs)
     cabecalho(s, "Cinco recomendações para a gestão", "VALOR ESTRATÉGICO PARA AS POLÍTICAS PÚBLICAS")
     recomendacoes = [
         ("Priorizar recursos com o ranking de risco",
-         "Gravidade para a Bahia e o Nordeste; volume para as grandes capitais"),
+         "Gravidade para a Bahia e o Nordeste; volume para as grandes redes urbanas"),
         ("Atacar o fluxo escolar nos anos iniciais",
          "Busca ativa, frequência e recomposição: a alavanca mais forte e acionável"),
         ("Expandir o regime de colaboração Estado-municípios",
@@ -526,14 +753,13 @@ def slide_recomendacoes(prs):
               ancora=MSO_ANCHOR.MIDDLE)
         texto(s, MARGEM + Inches(6.2), y, Inches(5.7), Inches(0.84), descricao, tamanho=15,
               ancora=MSO_ANCHOR.MIDDLE)
-    notas(s, "Nossa proposta: primeiro, priorizar recursos com o ranking de risco. Segundo, atacar o fluxo "
-             "escolar nos anos iniciais. Terceiro, expandir o regime de colaboração no modelo do Ceará. "
-             "Quarto, conectar municípios parecidos às suas referências. E quinto, usar o alerta de metas "
-             "antes da prova, para agir no mesmo ano.")
+    notas(s, "Nossas recomendações: priorizar recursos com o ranking de risco, atacar o fluxo escolar, expandir o "
+             "regime de colaboração no modelo do Ceará, conectar municípios às suas referências e usar o alerta "
+             "de metas antes da prova.")
 
 
 def slide_encerramento(prs):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
+    s = novo_slide(prs)
     fundo(s, ESCURO)
     texto(s, MARGEM, Inches(1.4), Inches(11.5), Inches(0.4), "MENSAGEM FINAL", tamanho=14, cor=CORAL, negrito=True)
     texto(s, MARGEM, Inches(1.95), Inches(11.5), Inches(1.6), "Os modelos dizem onde olhar primeiro",
@@ -543,26 +769,33 @@ def slide_encerramento(prs):
                 ("Acompanhar", "o efeito das ações nas redes priorizadas a cada ciclo")]
     for i, (verbo, descricao) in enumerate(proximos):
         x = MARGEM + i * Inches(4.1)
-        cartao(s, x, Inches(4.0), Inches(3.8), Inches(1.9), cor=RGBColor(0x2F, 0x56, 0x65))
+        cartao(s, x, Inches(4.0), Inches(3.8), Inches(1.9), cor=ESCURO_CARTAO)
         texto(s, x + Inches(0.35), Inches(4.25), Inches(3.1), Inches(0.5), verbo, tamanho=20, cor=CORAL, negrito=True)
         texto(s, x + Inches(0.35), Inches(4.8), Inches(3.1), Inches(1.0), descricao, tamanho=15, cor=BRANCO)
     texto(s, MARGEM, Inches(6.5), Inches(11.5), Inches(0.4), "Obrigado.", tamanho=16, cor=CLARO)
-    notas(s, "Os modelos não substituem o olhar das secretarias: eles dizem onde olhar primeiro. "
-             "Com os resultados de 2025, retreinamos tudo, e o alerta fica mais preciso a cada ciclo. Obrigado.")
+    notas(s, "Os modelos não substituem o olhar das secretarias: eles dizem onde olhar primeiro. Obrigado.")
+
+
+SLIDES = [
+    slide_capa, slide_agenda, slide_problema, slide_metodo,
+    slide_p1_resposta, slide_p1_exemplo,
+    slide_p2_resposta, slide_p2_evidencia,
+    slide_p3_resposta, slide_p3_referencias,
+    slide_p4_resposta, slide_p4_foco,
+    slide_p5_resposta, slide_p5_validacao,
+    slide_recomendacoes, slide_encerramento,
+]
 
 
 def gerar() -> Path:
     prs = Presentation()
     prs.slide_width, prs.slide_height = LARGURA, ALTURA
-    prs.core_properties.title = "Alfabetização no Brasil: onde agir e com qual alavanca"
+    prs.core_properties.title = "Alfabetização no Brasil: cinco perguntas para decidir onde agir"
     prs.core_properties.author = "eliaslopesjr1-maker"
-    for construir in [slide_capa, slide_agenda, slide_problema, slide_metodo, slide_fatores, slide_variaveis,
-                      slide_exemplo, slide_grupos, slide_risco, slide_metas, slide_validacao, slide_recomendacoes,
-                      slide_encerramento]:
+    for construir in SLIDES:
         construir(prs)
     destino = DIR_REPORTS / "apresentacao_executiva.pptx"
     prs.save(destino)
-    (DIR_IMAGENS / "_mapa_grupos.png").unlink(missing_ok=True)
     print(f"apresentação gerada: {destino} ({len(prs.slides)} slides)")
     return destino
 

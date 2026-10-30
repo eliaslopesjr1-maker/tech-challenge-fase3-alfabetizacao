@@ -49,7 +49,7 @@ Cada exigência do enunciado e onde ela é atendida no repositório.
 |---|---|
 | `data/`, `notebooks/`, `src/{preprocessing,modeling,evaluation,visualization}`, `reports/`, `images/` | estrutura do repositório |
 | `requirements.txt`, `README.md`, `.gitignore` | raiz |
-| Histórico de commits, branches, pull requests | PRs #1 a #8 (seção "Como o Git foi usado" do README) |
+| Histórico de commits, branches, pull requests | PRs #1 a #9 (seção "Como o Git foi usado" do README) |
 | Documentação das decisões analíticas | `docs/decisoes.md` (D1 a D16) |
 
 ## README

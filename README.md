@@ -357,11 +357,12 @@ explicados pelo fluxo escolar. Em todos os grupos há **referências de desvio p
 
 - **Link do vídeo:** *(adicionar após a gravação)*
 - **Apresentação:** [`reports/apresentacao_executiva.pptx`](reports/apresentacao_executiva.pptx).
-  São 13 slides, um por pergunta de negócio, com a resposta e os dados, e a fala de cada slide nas
-  notas do apresentador. Gerada por `python -m src.visualization.apresentacao`.
+  São 16 slides: cada pergunta de negócio ocupa 2, com a pergunta como título, a resposta direta e a
+  evidência nos dados. A fala de cada slide fica nas notas do apresentador. Gerada por
+  `python -m src.visualization.apresentacao`.
 - **Roteiro:** [`reports/roteiro_video.md`](reports/roteiro_video.md), slide a slide, com tempos. É
   uma reunião simulada com gestores públicos, com o problema, os principais insights, o valor
-  estratégico e as recomendações, em ~4min30s.
+  estratégico e as recomendações, em ~4min30s com as pausas.
 
 ## Como reproduzir
 
@@ -457,6 +458,7 @@ as métricas do teste de 2024 saíram idênticas às versionadas.
   | #6 | `feature/melhorias` | testes, amostra sem Google Cloud, 4 modelos com peso amostral, metas conservadoras |
   | #7 | `feature/metas-estaduais` | metas estaduais na EDA e validação externa com os resultados de 2025 |
   | #8 | `feature/apresentacao` | apresentação executiva em PowerPoint e roteiro do vídeo slide a slide |
+  | #9 | `feature/apresentacao-perguntas` | apresentação reorganizada por pergunta (2 slides cada) |
 
 - Os commits são pequenos e descrevem o *porquê* da mudança.
 - As decisões analíticas ficam registradas em [`docs/decisoes.md`](docs/decisoes.md).
