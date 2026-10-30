@@ -17,10 +17,14 @@ from sklearn.metrics import (
 from src.config import DIR_IMAGENS
 
 
-def calcular_metricas(y_true, proba, limiar: float = 0.5) -> dict:
+def calcular_metricas(y_true, proba, limiar: float = 0.5, peso=None) -> dict:
+    """Com `peso` (peso amostral do Inep), inclui o AUC ponderado, que representa a
+    população de alunos e não só a amostra avaliada."""
     pred = (proba >= limiar).astype(int)
+    ponderado = {"roc_auc_ponderado": roc_auc_score(y_true, proba, sample_weight=peso)} if peso is not None else {}
     return {
         "roc_auc": roc_auc_score(y_true, proba),
+        **ponderado,
         "pr_auc_alfabetizado": average_precision_score(y_true, proba),
         "pr_auc_nao_alfabetizado": average_precision_score(1 - np.asarray(y_true), 1 - proba),
         "brier": brier_score_loss(y_true, proba),
@@ -40,9 +44,10 @@ def limiar_por_recall(y_true, proba, recall_alvo: float) -> float:
     """Maior limiar que garante pelo menos `recall_alvo` de não alfabetizados
     identificados (predição = 0 quando proba < limiar)."""
     y_true = np.asarray(y_true)
-    for limiar in np.arange(0.30, 0.80, 0.005):
+    # Arredonda ANTES de testar: o valor devolvido é exatamente o que foi avaliado.
+    for limiar in np.round(np.arange(0.30, 0.80, 0.005), 3):
         if recall_score(y_true, (proba >= limiar).astype(int), pos_label=0) >= recall_alvo:
-            return round(float(limiar), 3)
+            return float(limiar)
     return 0.8
 
 
