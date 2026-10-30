@@ -90,13 +90,14 @@ def histograma(serie: pd.Series, salvar: str | None = None, titulo: str = "", xl
     return _finalizar(fig, salvar)
 
 
-def correlacoes_com_alvo(correlacoes: pd.Series, salvar: str | None = None, titulo: str = "") -> plt.Figure:
+def correlacoes_com_alvo(correlacoes: pd.Series, salvar: str | None = None, titulo: str = "",
+                         xlabel: str = "correlação de Spearman com a taxa de alfabetização") -> plt.Figure:
     correlacoes = correlacoes.sort_values()
     cores = np.where(correlacoes > 0, COR_PRINCIPAL, COR_DESTAQUE)
     fig, ax = plt.subplots(figsize=(8, max(4, 0.28 * len(correlacoes))))
     ax.barh(correlacoes.index, correlacoes.values, color=cores)
     ax.axvline(0, color="black", linewidth=0.8)
-    ax.set(title=titulo, xlabel="correlação de Spearman com a taxa de alfabetização")
+    ax.set(title=titulo, xlabel=xlabel)
     return _finalizar(fig, salvar)
 
 

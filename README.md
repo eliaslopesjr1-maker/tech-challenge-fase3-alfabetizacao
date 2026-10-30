@@ -1,6 +1,6 @@
 # Tech Challenge Fase 3 - Predição e Inteligência Analítica para Alfabetização no Brasil
 
-> README em construção. As seções de interpretabilidade, aplicação estratégica e evoluções futuras serão completadas nas próximas etapas.
+> README em construção. As seções de aplicação estratégica e evoluções futuras serão completadas nas próximas etapas.
 
 Continuação do [Tech Challenge Fase 2](https://github.com/eliaslopesjr1-maker/tech-challenge-fase2-alfabetizacao).
 A camada Gold construída lá é usada aqui para análise exploratória e modelos de Machine Learning
@@ -110,6 +110,55 @@ está nos dados públicos. Por isso o modelo é usado de duas formas: como **tri
 individual e como **taxa esperada calibrada** no nível município × rede, o nível certo para
 priorizar recursos.
 
+## Interpretação dos resultados
+
+Notebook completo: [`notebooks/03_interpretabilidade.ipynb`](notebooks/03_interpretabilidade.ipynb).
+Técnicas: **permutation importance**, **SHAP** (global, dependência e explicações locais) e
+**SHAP agregado por tema**, que contorna a multicolinearidade entre variáveis socioeconômicas.
+
+![Fatores por tema](images/int_04_shap_por_tema.png)
+
+| Tema | % da importância | Variáveis principais |
+|---|---|---|
+| Trajetória escolar | **31%** | distorção idade-série, abandono, aprovação no 2º ano |
+| Estado (UF) e região | **30%** | efeito da política/gestão estadual |
+| Nível socioeconômico | **19%** | INSE, alunos com INSE baixo, pobreza infantil, renda |
+| Porte da rede e do município | 6% | população, tamanho das escolas |
+| Ruralidade e diversidade | 6% | escolas rurais, áreas indígenas/quilombolas/assentamentos |
+| Infraestrutura escolar | 5% | biblioteca/sala de leitura, laboratório, tempo integral |
+| Docentes e equipe | 4% | formação superior, adequação da formação, alunos por docente |
+
+**Os efeitos têm limiares, não são lineares** (gráficos de dependência):
+- A **distorção idade-série** ajuda até ~5% e prejudica acima de ~8%. Depois disso o efeito satura.
+- **Qualquer abandono** acima de ~0,5% já muda o sinal.
+- O **INSE** tem um degrau por volta de 4,8.
+
+**O efeito do estado, descontado o contexto:**
+
+![Efeito UF](images/int_05_efeito_uf.png)
+
+- **Ceará (+1,06 em log-odds):** alfabetiza muito acima do que seu contexto prevê, o efeito
+  associado ao PAIC, o regime de colaboração Estado-municípios em vigor desde 2007.
+- **Goiás, Espírito Santo, Paraná e Pernambuco:** também entregam mais do que o contexto prevê.
+- **Sergipe, Rio Grande do Norte, Tocantins e Bahia:** entregam menos.
+- **Exemplo local:** um município cearense com **76% de pobreza infantil** e INSE baixo tem
+  previsão de 95% de alfabetização, graças a uma rede com abandono zero, distorção de 1,9% e tempo
+  integral.
+
+## Respostas às perguntas de negócio
+
+**Quais fatores mais impactam a alfabetização?**
+Trajetória escolar (31%), estado/política estadual (30%) e nível socioeconômico (19%). Porte,
+ruralidade, infraestrutura e formação docente têm peso menor. O contexto socioeconômico importa,
+mas não determina o resultado: as alavancas mais fortes, fluxo escolar e regime de colaboração,
+estão ao alcance da gestão pública.
+
+**Quais variáveis possuem maior influência nos modelos?**
+`sigla_uf` (sobretudo o Ceará), `tdi_ef_anos_iniciais` (distorção idade-série),
+`taxa_abandono_ef_anos_iniciais`, `inse_medio` e `pct_alunos_inse_baixo`. SHAP e permutation
+importance concordam no topo do ranking. Os coeficientes da logística foram descartados para
+interpretação: com a multicolinearidade, alguns sinais se invertem.
+
 ## Limitações do projeto
 
 - **Features só de contexto:** o `id_escola` dos microdados é anonimizado pelo Inep e não cruza
@@ -124,6 +173,9 @@ priorizar recursos.
 - **Amostra de 300 mil alunos por ano**, por limite de memória da máquina de desenvolvimento.
   Como as features são do município × rede, a perda de informação é mínima.
 - **IDHM de 2010:** é o último Atlas municipal disponível e pode não refletir mudanças recentes.
+- **Associação, não causalidade:** o SHAP explica o modelo, não o mundo. O "efeito UF" captura
+  tudo o que é comum ao estado e não está nas features, e a ligação com programas como o PAIC é uma
+  hipótese consistente com a literatura, não uma prova causal.
 
 ## Como reproduzir
 
