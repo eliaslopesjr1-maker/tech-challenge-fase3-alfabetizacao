@@ -15,7 +15,7 @@ sobre o **Indicador Criança Alfabetizada**.
 [Aplicação estratégica](#aplicação-estratégica) · [Perguntas de negócio](#respostas-às-perguntas-de-negócio) ·
 [Insights](#insights-encontrados) · [Políticas públicas](#aplicação-prática-para-políticas-públicas) ·
 [Limitações](#limitações-do-projeto) · [Evoluções futuras](#possíveis-evoluções-futuras) ·
-[Como reproduzir](#como-reproduzir)
+[Como reproduzir](#como-reproduzir) · [Autoria](#autoria)
 
 ## Contexto do problema
 
@@ -439,13 +439,19 @@ as métricas do teste de 2024 saíram idênticas às versionadas.
 
   | PR | Branch | Etapa |
   |---|---|---|
-  | #1 | `feature/eda` | enriquecimento externo e análise exploratória |
-  | #2 | `feature/modelagem` | modelo supervisionado do aluno |
-  | #3 | `feature/interpretabilidade` | SHAP, permutation importance e efeito por estado |
-  | #4 | `feature/aplicacao-estrategica` | metas 2025, risco municipal e grupos de contexto |
-  | #5 | `feature/fechamento` | pipeline único, insights e evoluções futuras |
-  | #6 | `feature/melhorias` | testes, amostra sem Google Cloud, 4 modelos com peso amostral, metas conservadoras |
-  | #7 | `feature/metas-estaduais` | metas estaduais na EDA e validação externa com os resultados de 2025 |
+  | [#1](https://github.com/eliaslopesjr1-maker/tech-challenge-fase3-alfabetizacao/pull/1) | `feature/eda` | enriquecimento externo e análise exploratória |
+  | [#2](https://github.com/eliaslopesjr1-maker/tech-challenge-fase3-alfabetizacao/pull/2) | `feature/modelagem` | modelo supervisionado do aluno |
+  | [#3](https://github.com/eliaslopesjr1-maker/tech-challenge-fase3-alfabetizacao/pull/3) | `feature/interpretabilidade` | SHAP, permutation importance e efeito por estado |
+  | [#4](https://github.com/eliaslopesjr1-maker/tech-challenge-fase3-alfabetizacao/pull/4) | `feature/aplicacao-estrategica` | metas 2025, risco municipal e grupos de contexto |
+  | [#5](https://github.com/eliaslopesjr1-maker/tech-challenge-fase3-alfabetizacao/pull/5) | `feature/fechamento` | pipeline único, insights e evoluções futuras |
+  | [#6](https://github.com/eliaslopesjr1-maker/tech-challenge-fase3-alfabetizacao/pull/6) | `feature/melhorias` | testes, amostra sem Google Cloud, 4 modelos com peso amostral, metas conservadoras |
+  | [#7](https://github.com/eliaslopesjr1-maker/tech-challenge-fase3-alfabetizacao/pull/7) | `feature/metas-estaduais` | metas estaduais na EDA e validação externa com os resultados de 2025 |
+  | [#8](https://github.com/eliaslopesjr1-maker/tech-challenge-fase3-alfabetizacao/pull/8) | `docs/autoria-e-ajustes-finais` | seção de autoria, links dos PRs e notebook de interpretabilidade sem avisos |
 
 - Os commits são pequenos e descrevem o *porquê* da mudança.
 - As decisões analíticas ficam registradas em [`docs/decisoes.md`](docs/decisoes.md).
+
+## Autoria
+
+Desenvolvido por **Elias Lopes Silva Junior**
+([@eliaslopesjr1-maker](https://github.com/eliaslopesjr1-maker)) como Tech Challenge da Fase 3.
