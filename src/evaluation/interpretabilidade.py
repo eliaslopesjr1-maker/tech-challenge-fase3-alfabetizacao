@@ -6,6 +6,8 @@ leitura por variável, os valores SHAP são somados por TEMA - o que responde
 melhor à pergunta de negócio "quais fatores mais impactam a alfabetização".
 """
 
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -61,7 +63,9 @@ def calcular_shap(pipeline, X: pd.DataFrame) -> tuple[np.ndarray, pd.DataFrame]:
     """Valores SHAP (em log-odds) do modelo LightGBM, nas features já transformadas."""
     prep, modelo = pipeline.named_steps["prep"], pipeline.named_steps["modelo"]
     X_transformado = pd.DataFrame(prep.transform(X), columns=prep.get_feature_names_out(), index=X.index)
-    valores = shap.TreeExplainer(modelo).shap_values(X_transformado)
+    with warnings.catch_warnings():  # aviso informativo do SHAP sobre o formato de saída do LightGBM
+        warnings.filterwarnings("ignore", message="LightGBM binary classifier", category=UserWarning)
+        valores = shap.TreeExplainer(modelo).shap_values(X_transformado)
     if isinstance(valores, list):  # versões antigas do SHAP devolvem uma matriz por classe
         valores = valores[1]
     return valores, X_transformado
